@@ -459,224 +459,10 @@ function addDemoShipmentRoutes() {
     });
 }
 
-function focusShipmentOnMap(shipmentId) {
-    var cargo = cargoDatabase.find(function(c) { return c.id === shipmentId; });
-    if (!cargo || !trackingMap) return;
-
-    var coords = cityCoords[cargo.origin.toLowerCase().replace(/\s+/g, '')];
-    if (coords) {
-        trackingMap.setView([coords.lat, coords.lng], 5, { animate: true });
-    }
-}
-
 
 // ==========================================
-// CARGO DATABASE
+// TRACKING SEARCH (redirects to tracking page)
 // ==========================================
-
-var cityCoords = {
-    shanghai: { lat: 31.23, lng: 121.47 },
-    rotterdam: { lat: 51.92, lng: 4.48 },
-    losangeles: { lat: 33.94, lng: -118.41 },
-    singapore: { lat: 1.35, lng: 103.82 },
-    dubai: { lat: 25.28, lng: 55.30 },
-    miami: { lat: 25.76, lng: -80.19 },
-    newyork: { lat: 40.71, lng: -74.01 },
-    frankfurt: { lat: 50.04, lng: 8.56 },
-    tokyo: { lat: 35.68, lng: 139.69 }
-};
-
-var cargoDatabase = (function() {
-    try {
-        var stored = localStorage.getItem('toxActiveShipments');
-        if (stored) return JSON.parse(stored);
-    } catch(e) {}
-    return [
-    {
-        id: 'TOX-2026-001234',
-        origin: 'Shanghai',
-        destination: 'Rotterdam',
-        status: 'In Transit',
-        type: 'Ocean Freight',
-        weight: '2,400 kg',
-        containers: '2x 40HC',
-        eta: '2026-02-28',
-        departure: '2026-02-01',
-        current_location: 'Suez Canal Area',
-        progress: 65,
-        timeline: [
-            { time: '02:15 Feb 1', location: 'Port of Shanghai', status: 'Departed', completed: true },
-            { time: '14:30 Feb 15', location: 'Suez Canal', status: 'Passed through', completed: true },
-            { time: '12:00 Feb 28', location: 'Port of Rotterdam', status: 'Expected Arrival', completed: false }
-        ]
-    },
-    {
-        id: 'TOX-2026-005678',
-        origin: 'Los Angeles',
-        destination: 'Singapore',
-        status: 'Processing',
-        type: 'Air Cargo',
-        weight: '500 kg',
-        containers: '1x Pallet',
-        eta: '2026-02-25',
-        departure: '2026-02-22',
-        current_location: 'LAX Terminal',
-        progress: 15,
-        timeline: [
-            { time: '08:00 Feb 22', location: 'LAX Cargo Terminal', status: 'Received', completed: true },
-            { time: '14:00 Feb 22', location: 'Customs Clearance', status: 'In Process', completed: false },
-            { time: '18:00 Feb 25', location: 'Singapore Changi', status: 'Expected', completed: false }
-        ]
-    },
-    {
-        id: 'TOX-2026-009012',
-        origin: 'Dubai',
-        destination: 'Miami',
-        status: 'Delivered',
-        type: 'Ground Transportation',
-        weight: '350 kg',
-        containers: '1x Box',
-        eta: '2026-02-20',
-        departure: '2026-02-18',
-        current_location: 'Miami Distribution Center',
-        progress: 100,
-        timeline: [
-            { time: '09:30 Feb 18', location: 'Dubai Warehouse', status: 'Departed', completed: true },
-            { time: '16:45 Feb 19', location: 'Dubai Port', status: 'Loaded', completed: true },
-            { time: '14:30 Feb 20', location: 'Miami DC', status: 'Delivered', completed: true }
-        ]
-    },
-    {
-        id: 'TOX-2026-003456',
-        origin: 'Rotterdam',
-        destination: 'New York',
-        status: 'Loading',
-        type: 'Ocean Freight',
-        weight: '18,900 kg',
-        containers: '5x 40HC',
-        eta: '2026-03-05',
-        departure: '2026-02-26',
-        current_location: 'Port of Rotterdam',
-        progress: 30,
-        timeline: [
-            { time: '06:00 Feb 26', location: 'Port of Rotterdam', status: 'Loading Started', completed: true },
-            { time: '18:00 Feb 26', location: 'Port of Rotterdam', status: 'Loading in Progress', completed: false },
-            { time: '08:00 Mar 5', location: 'Port of New York', status: 'Expected', completed: false }
-        ]
-    },
-    {
-        id: 'TOX-2026-007890',
-        origin: 'Frankfurt',
-        destination: 'Tokyo',
-        status: 'In Flight',
-        type: 'Air Cargo',
-        weight: '1,200 kg',
-        containers: '3x Pallets',
-        eta: '2026-02-24',
-        departure: '2026-02-23',
-        current_location: 'Central Asia Airspace',
-        progress: 72,
-        timeline: [
-            { time: '14:20 Feb 23', location: 'Frankfurt Airport', status: 'Departed', completed: true },
-            { time: '09:45 Feb 24', location: 'Central Asia', status: 'In Flight', completed: false },
-            { time: '18:30 Feb 24', location: 'Tokyo Narita', status: 'Expected', completed: false }
-        ]
-    }
-];
-})();
-
-
-// ==========================================
-// CARGO TRACKING FUNCTIONS
-// ==========================================
-
-function renderCargoCards() {
-    var cargoGrid = document.querySelector('.cargo-grid');
-    if (!cargoGrid) return;
-    cargoGrid.innerHTML = '';
-
-    cargoDatabase.forEach(function(cargo) {
-        var statusClass = cargo.status === 'Delivered' ? 'status-delivered' :
-                          cargo.status === 'In Transit' || cargo.status === 'In Flight' ? 'status-transit' :
-                          'status-pending';
-
-        var card = document.createElement('div');
-        card.className = 'cargo-card';
-        card.setAttribute('role', 'listitem');
-        card.setAttribute('tabindex', '0');
-
-        card.innerHTML =
-            '<div class="cargo-header">' +
-                '<span class="cargo-id">' + cargo.id + '</span>' +
-                '<span class="cargo-status ' + statusClass + '">' + cargo.status + '</span>' +
-            '</div>' +
-            '<div class="cargo-route">' +
-                '<i class="fas fa-route"></i> ' + cargo.origin + ' → ' + cargo.destination + '<br>' +
-                '<small>' + cargo.type + ' | ' + cargo.weight + '</small>' +
-            '</div>' +
-            '<div class="cargo-eta">' +
-                '<span>ETA: <strong>' + cargo.eta + '</strong></span>' +
-                '<span>Progress: <strong>' + cargo.progress + '%</strong></span>' +
-            '</div>';
-
-        card.addEventListener('click', function() { openCargoModal(cargo.id); });
-        card.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openCargoModal(cargo.id); }
-        });
-
-        cargoGrid.appendChild(card);
-    });
-}
-
-function openCargoModal(cargoId) {
-    var cargo = cargoDatabase.find(function(c) { return c.id === cargoId; });
-    if (!cargo) { showAlert('Shipment not found', 'error'); return; }
-
-    var modalBody = document.getElementById('modalBody');
-    var timelineHTML = cargo.timeline.map(function(item) {
-        return '<div class="timeline-item">' +
-            '<div class="timeline-dot ' + (item.completed ? 'active' : '') + '">' +
-                (item.completed ? '<i class="fas fa-check"></i>' : '') +
-            '</div>' +
-            '<div class="timeline-content">' +
-                '<h4>' + item.status + '</h4>' +
-                '<p>' + item.location + ' — ' + item.time + '</p>' +
-            '</div>' +
-        '</div>';
-    }).join('');
-
-    modalBody.innerHTML =
-        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;">' +
-            '<div><small style="color:#6c757d">Tracking ID</small><br><strong>' + cargo.id + '</strong></div>' +
-            '<div><small style="color:#6c757d">Status</small><br><strong>' + cargo.status + '</strong></div>' +
-            '<div><small style="color:#6c757d">Type</small><br><strong>' + cargo.type + '</strong></div>' +
-            '<div><small style="color:#6c757d">Weight</small><br><strong>' + cargo.weight + '</strong></div>' +
-            '<div><small style="color:#6c757d">Origin</small><br><strong>' + cargo.origin + '</strong></div>' +
-            '<div><small style="color:#6c757d">Destination</small><br><strong>' + cargo.destination + '</strong></div>' +
-            '<div><small style="color:#6c757d">Departure</small><br><strong>' + cargo.departure + '</strong></div>' +
-            '<div><small style="color:#6c757d">ETA</small><br><strong>' + cargo.eta + '</strong></div>' +
-            '<div style="grid-column:span 2"><small style="color:#6c757d">Current Location</small><br><strong>' + cargo.current_location + '</strong></div>' +
-        '</div>' +
-        '<h4 style="margin-bottom:16px;color:#1D3557;">Shipment Timeline</h4>' +
-        '<div class="timeline-container">' + timelineHTML + '</div>';
-
-    document.getElementById('cargoModal').classList.add('active');
-    document.getElementById('cargoModal').setAttribute('aria-hidden', 'false');
-    document.body.style.overflow = 'hidden';
-}
-
-function closeCargoModal() {
-    var modal = document.getElementById('cargoModal');
-    if (modal) {
-        modal.classList.remove('active');
-        modal.setAttribute('aria-hidden', 'true');
-    }
-    document.body.style.overflow = '';
-}
-
-function downloadShipmentPDF() {
-    showAlert('PDF generation is being prepared. Please try again shortly.', 'info');
-}
 
 function handleTrackingSearch(event) {
     event.preventDefault();
@@ -689,20 +475,18 @@ function handleTrackingSearch(event) {
         return;
     }
 
-    if (!/^TOX-\d{4}-\d{3,6}$/.test(trackingNumber)) {
-        showError(errorDiv, 'Invalid format. Use: TOX-YYYY-XXXXXX');
+    // Accept both old format (TOX-2026-001234) and new format (TOX-SEA-SHRO-260315-849271-K7)
+    if (!/^TOX-[A-Z0-9-]{5,40}$/.test(trackingNumber)) {
+        showError(errorDiv, 'Invalid format. Use: TOX-AIR-LASI-260325-123456-A1');
         return;
     }
 
-    var cargo = cargoDatabase.find(function(c) { return c.id === trackingNumber; });
-    if (cargo) {
-        errorDiv.textContent = '';
-        FormDataManager.saveTrackingHistory(trackingNumber);
-        showTrackingHistory();
-        openCargoModal(trackingNumber);
-    } else {
-        showError(errorDiv, 'Shipment ' + trackingNumber + ' not found. Try: TOX-2026-001234');
-    }
+    errorDiv.textContent = '';
+    FormDataManager.saveTrackingHistory(trackingNumber);
+    showTrackingHistory();
+
+    // Redirect to tracking page with the tracking number
+    window.location.href = 'tracking.html?id=' + encodeURIComponent(trackingNumber);
 }
 
 
@@ -930,15 +714,10 @@ document.addEventListener('DOMContentLoaded', function() {
     autoFillForms();
     showTrackingHistory();
 
-    // 4. Render cargo cards
-    if (document.querySelector('.cargo-grid')) {
-        renderCargoCards();
-    }
-
-    // 5. Initialize tracking map
+    // 4. Initialize tracking map
     initTrackingMap();
 
-    // 6. Testimonial auto-rotation
+    // 5. Testimonial auto-rotation
     autoRotateTestimonials();
 
     // 7. Counter animation (trigger when hero is visible)
@@ -968,22 +747,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // 10. Escape key to close modal
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            closeCargoModal();
-        }
-    });
-
-    // 11. Click outside modal to close
-    var modalEl = document.getElementById('cargoModal');
-    if (modalEl) {
-        modalEl.addEventListener('click', function(e) {
-            if (e.target.id === 'cargoModal') closeCargoModal();
-        });
-    }
-
-    // 12. Tidio / fallback chat
+    // 10. Tidio / fallback chat
     initializeTidio();
     setTimeout(function() {
         if (typeof tidioChatApi === 'undefined') {

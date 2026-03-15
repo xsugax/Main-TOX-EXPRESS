@@ -240,6 +240,7 @@ app.get('/api/track/:shipmentId', rateLimit(60000, 20), (req, res) => {
         id: shipment.id,
         origin: shipment.origin,
         destination: shipment.destination,
+        deliveryAddress: shipment.deliveryAddress || '',
         status: shipment.status,
         type: shipment.type,
         eta: shipment.eta,

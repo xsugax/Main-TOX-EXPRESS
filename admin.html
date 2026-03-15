@@ -1754,6 +1754,12 @@
                                     </div>
                                 </div>
                                 <div class="form-row">
+                                    <div class="form-group" style="grid-column:span 2;">
+                                        <label for="newDeliveryAddress">Delivery Address <span style="color:#E63946;">*</span></label>
+                                        <textarea id="newDeliveryAddress" rows="2" placeholder="Full delivery address (street, building, city, zip code, country)" required style="width:100%;"></textarea>
+                                    </div>
+                                </div>
+                                <div class="form-row">
                                     <div class="form-group">
                                         <label for="newType">Shipment Type <span style="color:#E63946;">*</span></label>
                                         <select id="newType" required>
@@ -2343,6 +2349,12 @@
                                     <div class="form-group">
                                         <label for="docConsigneeAddr">Consignee Address <span style="color:#E63946;">*</span></label>
                                         <input type="text" id="docConsigneeAddr" placeholder="Recipient full address" required>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group" style="grid-column:span 2;">
+                                        <label for="docDeliveryAddr">Delivery Address</label>
+                                        <input type="text" id="docDeliveryAddr" placeholder="Full delivery address (if different from consignee)">
                                     </div>
                                 </div>
                             </div>
@@ -3211,6 +3223,7 @@
             e.preventDefault();
             const origin = getCityValue('newOrigin', 'newOriginCustom');
             const destination = getCityValue('newDestination', 'newDestinationCustom');
+            const deliveryAddress = document.getElementById('newDeliveryAddress').value.trim();
             const type = document.getElementById('newType').value;
             const weight = document.getElementById('newWeight').value;
             const eta = document.getElementById('newETA').value;
@@ -3245,7 +3258,7 @@
             if (document.getElementById('newHighValue').checked) flags.push('High Value');
             if (document.getElementById('newLiveAnimals').checked) flags.push('Live Animals');
 
-            if (!clientName || !clientEmail || !origin || !destination || !weight || !eta || !length || !width || !height || !cargoDescription || !declaredValue || !pickupDate) {
+            if (!clientName || !clientEmail || !origin || !destination || !deliveryAddress || !weight || !eta || !length || !width || !height || !cargoDescription || !declaredValue || !pickupDate) {
                 toast('Please fill all required fields', 'error');
                 return;
             }
@@ -3284,7 +3297,7 @@
             const shipmentId = generateTrackingId(type, origin, destination);
 
             const shipmentData = {
-                id: shipmentId, origin, destination, type, status, eta, description, priority, incoterms,
+                id: shipmentId, origin, destination, deliveryAddress, type, status, eta, description, priority, incoterms,
                 client: { name: clientName, email: clientEmail, phone: clientPhone, company: clientCompany },
                 dimensions: { length: parseFloat(length), width: parseFloat(width), height: parseFloat(height) },
                 weight: parseFloat(weight),
@@ -4241,6 +4254,22 @@
             document.getElementById('docOrigin').value = ship.origin || '';
             document.getElementById('docDestination').value = ship.destination || '';
             document.getElementById('docShipType').value = ship.type || 'Ocean Freight';
+            // Auto-fill consignee from client info
+            if (ship.client) {
+                document.getElementById('docConsignee').value = ship.client.name || '';
+                var addr = ship.deliveryAddress || '';
+                if (!addr && ship.client.company) addr = ship.client.company;
+                document.getElementById('docConsigneeAddr').value = addr;
+            }
+            // Auto-fill cargo details
+            if (ship.cargo) {
+                document.getElementById('docCargoDesc').value = ship.cargo.description || '';
+                document.getElementById('docHSCode').value = ship.cargo.hsCode || '';
+                document.getElementById('docValue').value = ship.cargo.declaredValue || '';
+            }
+            document.getElementById('docWeight').value = ship.weight || '';
+            document.getElementById('docPieces').value = ship.pieces || '1';
+            document.getElementById('docIncoterms').value = ship.incoterms || 'FOB';
         }
 
         function generateDocument(e, previewOnly) {
@@ -4257,6 +4286,7 @@
                 shipperAddr: document.getElementById('docShipperAddr').value,
                 consignee: document.getElementById('docConsignee').value,
                 consigneeAddr: document.getElementById('docConsigneeAddr').value,
+                deliveryAddr: document.getElementById('docDeliveryAddr').value,
                 cargoDesc: document.getElementById('docCargoDesc').value,
                 hsCode: document.getElementById('docHSCode').value || 'N/A',
                 weight: document.getElementById('docWeight').value,
@@ -4304,6 +4334,11 @@
                 '<tr><td style="width:50%;vertical-align:top;padding:12px;border:1px solid #ddd;background:#f8f9fa;"><div style="font-weight:700;color:#1D3557;margin-bottom:6px;font-size:13px;">SHIPPER</div><div style="font-size:12px;color:#333;">' + escHtml(d.shipper) + '<br>' + escHtml(d.shipperAddr) + '</div></td>' +
                 '<td style="width:50%;vertical-align:top;padding:12px;border:1px solid #ddd;background:#f8f9fa;"><div style="font-weight:700;color:#1D3557;margin-bottom:6px;font-size:13px;">CONSIGNEE</div><div style="font-size:12px;color:#333;">' + escHtml(d.consignee) + '<br>' + escHtml(d.consigneeAddr) + '</div></td></tr></table>';
 
+            var deliveryBlock = '';
+            if (d.deliveryAddr) {
+                deliveryBlock = '<table style="width:100%;margin-bottom:20px;border-collapse:collapse;"><tr><td style="padding:12px;border:1px solid #ddd;background:#f0f7ff;"><div style="font-weight:700;color:#1D3557;margin-bottom:6px;font-size:13px;"><i style="color:#E63946;">&#9679;</i> DELIVERY ADDRESS</div><div style="font-size:12px;color:#333;">' + escHtml(d.deliveryAddr) + '</div></td></tr></table>';
+            }
+
             var cargoTable = '<table style="width:100%;border-collapse:collapse;margin-bottom:20px;">' +
                 '<thead><tr style="background:#1D3557;color:white;"><th style="padding:8px 12px;text-align:left;font-size:11px;">Description</th><th style="padding:8px 12px;text-align:center;font-size:11px;">HS Code</th><th style="padding:8px 12px;text-align:center;font-size:11px;">Pieces</th><th style="padding:8px 12px;text-align:center;font-size:11px;">Weight (kg)</th><th style="padding:8px 12px;text-align:right;font-size:11px;">Value (USD)</th></tr></thead>' +
                 '<tbody><tr><td style="padding:10px 12px;border-bottom:1px solid #eee;font-size:12px;">' + escHtml(d.cargoDesc) + '</td><td style="padding:10px 12px;border-bottom:1px solid #eee;text-align:center;font-size:12px;">' + escHtml(d.hsCode) + '</td><td style="padding:10px 12px;border-bottom:1px solid #eee;text-align:center;font-size:12px;">' + escHtml(d.pieces) + '</td><td style="padding:10px 12px;border-bottom:1px solid #eee;text-align:center;font-size:12px;">' + escHtml(d.weight) + '</td><td style="padding:10px 12px;border-bottom:1px solid #eee;text-align:right;font-size:12px;">$' + escHtml(parseFloat(d.value || 0).toLocaleString()) + '</td></tr></tbody></table>';
@@ -4344,7 +4379,7 @@
                     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">' +
                     '<div style="padding:8px;border:1px solid #ddd;"><span style="font-size:10px;color:#888;">B/L Number:</span><br><strong>' + escHtml(docNum) + '</strong></div>' +
                     '<div style="padding:8px;border:1px solid #ddd;"><span style="font-size:10px;color:#888;">Shipment ID:</span><br><strong>' + escHtml(d.shipmentId) + '</strong></div></div>' +
-                    partyBlock + routeBlock + cargoTable +
+                    partyBlock + deliveryBlock + routeBlock + cargoTable +
                     (d.notes ? '<div style="padding:12px;border:1px solid #ddd;margin-bottom:20px;background:#fffbeb;"><div style="font-size:10px;color:#888;font-weight:700;margin-bottom:4px;">REMARKS</div><div style="font-size:12px;">' + escHtml(d.notes) + '</div></div>' : '') +
                     '<div style="background:#f8f9fa;padding:12px;margin-bottom:20px;font-size:11px;color:#555;border-left:3px solid #1D3557;">RECEIVED the goods listed above in apparent good order and condition for carriage to the port of discharge. The carrier shall deliver the goods to the consignee or their authorized agent upon presentation of this Bill of Lading.</div>' +
                     footer + '</div>';
@@ -4358,7 +4393,7 @@
                     '<div style="padding:8px;border:1px solid #ddd;"><span style="font-size:10px;color:#888;">Invoice No:</span><br><strong>' + escHtml(docNum) + '</strong></div>' +
                     '<div style="padding:8px;border:1px solid #ddd;"><span style="font-size:10px;color:#888;">Incoterms:</span><br><strong>' + escHtml(d.incoterms) + '</strong></div>' +
                     '<div style="padding:8px;border:1px solid #ddd;"><span style="font-size:10px;color:#888;">Currency:</span><br><strong>USD</strong></div></div>' +
-                    partyBlock + cargoTable +
+                    partyBlock + deliveryBlock + cargoTable +
                     '<table style="width:300px;margin-left:auto;border-collapse:collapse;margin-bottom:20px;">' +
                     '<tr><td style="padding:6px 12px;font-size:12px;border-bottom:1px solid #eee;">Subtotal</td><td style="padding:6px 12px;text-align:right;font-size:12px;border-bottom:1px solid #eee;">$' + subtotal.toLocaleString() + '</td></tr>' +
                     '<tr><td style="padding:6px 12px;font-size:12px;border-bottom:1px solid #eee;">Insurance</td><td style="padding:6px 12px;text-align:right;font-size:12px;border-bottom:1px solid #eee;">$' + (subtotal * 0.005).toFixed(2) + '</td></tr>' +
@@ -4374,7 +4409,7 @@
                     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">' +
                     '<div style="padding:8px;border:1px solid #ddd;"><span style="font-size:10px;color:#888;">Reference:</span><br><strong>' + escHtml(docNum) + '</strong></div>' +
                     '<div style="padding:8px;border:1px solid #ddd;"><span style="font-size:10px;color:#888;">Shipment:</span><br><strong>' + escHtml(d.shipmentId) + '</strong></div></div>' +
-                    partyBlock + routeBlock +
+                    partyBlock + deliveryBlock + routeBlock +
                     '<table style="width:100%;border-collapse:collapse;margin-bottom:20px;">' +
                     '<thead><tr style="background:#1D3557;color:white;"><th style="padding:8px 12px;text-align:left;font-size:11px;">Item #</th><th style="padding:8px 12px;text-align:left;font-size:11px;">Description</th><th style="padding:8px 12px;text-align:center;font-size:11px;">Qty</th><th style="padding:8px 12px;text-align:center;font-size:11px;">Weight (kg)</th><th style="padding:8px 12px;text-align:left;font-size:11px;">Dimensions</th></tr></thead>' +
                     '<tbody><tr><td style="padding:10px 12px;border-bottom:1px solid #eee;">1</td><td style="padding:10px 12px;border-bottom:1px solid #eee;">' + escHtml(d.cargoDesc) + '</td><td style="padding:10px 12px;border-bottom:1px solid #eee;text-align:center;">' + escHtml(d.pieces) + '</td><td style="padding:10px 12px;border-bottom:1px solid #eee;text-align:center;">' + escHtml(d.weight) + '</td><td style="padding:10px 12px;border-bottom:1px solid #eee;">—</td></tr>' +
@@ -4390,7 +4425,7 @@
                     '<div style="padding:8px;border:1px solid #ddd;"><span style="font-size:10px;color:#888;">Receipt No:</span><br><strong>' + escHtml(docNum) + '</strong></div>' +
                     '<div style="padding:8px;border:1px solid #ddd;"><span style="font-size:10px;color:#888;">Shipment:</span><br><strong>' + escHtml(d.shipmentId) + '</strong></div>' +
                     '<div style="padding:8px;border:1px solid #ddd;"><span style="font-size:10px;color:#888;">Delivery Date:</span><br><strong>' + escHtml(d.date) + '</strong></div></div>' +
-                    partyBlock + cargoTable +
+                    partyBlock + deliveryBlock + cargoTable +
                     '<div style="background:#f0fdf4;border:1px solid #22c55e;padding:20px;margin-bottom:20px;">' +
                     '<div style="font-weight:700;color:#16a34a;margin-bottom:12px;">CONFIRMATION OF RECEIPT</div>' +
                     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">' +
@@ -4408,7 +4443,7 @@
                     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">' +
                     '<div style="padding:8px;border:1px solid #ddd;"><span style="font-size:10px;color:#888;">Certificate No:</span><br><strong>' + escHtml(docNum) + '</strong></div>' +
                     '<div style="padding:8px;border:1px solid #ddd;"><span style="font-size:10px;color:#888;">Shipment:</span><br><strong>' + escHtml(d.shipmentId) + '</strong></div></div>' +
-                    partyBlock +
+                    partyBlock + deliveryBlock +
                     '<div style="background:#f8f9fa;padding:16px;border:1px solid #ddd;margin-bottom:20px;">' +
                     '<div style="font-weight:700;color:#1D3557;margin-bottom:10px;font-size:13px;">DECLARATION OF ORIGIN</div>' +
                     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">' +
@@ -4423,7 +4458,7 @@
                     footer + '</div>';
             }
 
-            return '<div style="' + pageStyle + '">' + commonHeader + partyBlock + routeBlock + cargoTable + footer + '</div>';
+            return '<div style="' + pageStyle + '">' + commonHeader + partyBlock + deliveryBlock + routeBlock + cargoTable + footer + '</div>';
         }
 
         function renderGeneratedDocs() {

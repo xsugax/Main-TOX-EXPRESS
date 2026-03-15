@@ -543,7 +543,7 @@
                     <div class="search-group">
                         <div class="search-input-wrap">
                             <i class="fas fa-search"></i>
-                            <input type="text" id="trackingNumber" placeholder="Enter Tracking Number (e.g., TOX-2026-001234)" aria-label="Tracking number" required>
+                            <input type="text" id="trackingNumber" placeholder="Enter Tracking Number (e.g., TOX-AIR-LASI-260325-123456-A1)" aria-label="Tracking number" required>
                         </div>
                         <button type="submit" class="btn-primary"><i class="fas fa-search"></i> Track</button>
                     </div>
@@ -566,23 +566,6 @@
                     <div class="legend-item"><span class="legend-dot origin"></span> Origin</div>
                     <div class="legend-item"><span class="legend-dot current"></span> Current Position</div>
                     <div class="legend-item"><span class="legend-dot destination"></span> Destination</div>
-                </div>
-            </div>
-            <div class="cargo-container">
-                <h3 class="cargo-section-title"><i class="fas fa-boxes-stacked"></i> Active Shipments</h3>
-                <div class="cargo-grid" role="list" aria-label="Active shipments"></div>
-            </div>
-            <div id="cargoModal" class="cargo-modal" role="dialog" aria-labelledby="modalTitle" aria-hidden="true">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h3 id="modalTitle">Shipment Details</h3>
-                        <button class="modal-close" aria-label="Close modal" onclick="closeCargoModal()">&times;</button>
-                    </div>
-                    <div class="modal-body" id="modalBody"></div>
-                    <div class="modal-footer">
-                        <button class="btn-secondary" onclick="closeCargoModal()">Close</button>
-                        <button class="btn-primary" onclick="downloadShipmentPDF()"><i class="fas fa-file-pdf"></i> Download PDF</button>
-                    </div>
                 </div>
             </div>
         </div>

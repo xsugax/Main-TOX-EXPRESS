@@ -39,13 +39,21 @@ async function trackShipment() {
     }
 }
 
-// Allow pressing Enter to search
+// Allow pressing Enter to search + auto-track from URL parameter
 document.addEventListener('DOMContentLoaded', function() {
     var input = document.getElementById('trackingNumber');
     if (input) {
         input.addEventListener('keydown', function(e) {
             if (e.key === 'Enter') { e.preventDefault(); trackShipment(); }
         });
+
+        // Auto-fill and track if ?id= parameter is present
+        var params = new URLSearchParams(window.location.search);
+        var urlId = params.get('id');
+        if (urlId) {
+            input.value = urlId.trim().toUpperCase();
+            trackShipment();
+        }
     }
 });
 
@@ -101,6 +109,13 @@ function renderShipmentResult(s) {
         '<div class="track-route-line"><i class="fas fa-plane"></i></div>' +
         '<div class="track-route-point"><div class="track-route-dot dest"></div><div class="track-route-label">Destination</div><div class="track-route-city">' + escTrack(s.destination) + '</div></div>' +
         '</div>';
+
+    // === Delivery Address ===
+    if (s.deliveryAddress) {
+        html += '<div class="track-delivery-address" style="background:rgba(29,53,87,0.04);border-radius:10px;padding:14px 18px;margin-bottom:18px;border-left:3px solid #1D3557;">' +
+            '<div style="font-size:12px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;"><i class="fas fa-map-marker-alt" style="color:#E63946;"></i> Delivery Address</div>' +
+            '<div style="font-size:14px;color:#1D3557;font-weight:500;">' + escTrack(s.deliveryAddress) + '</div></div>';
+    }
 
     // === Details Grid ===
     html += '<div class="track-details-grid">';
