@@ -991,7 +991,138 @@ document.addEventListener('DOMContentLoaded', function() {
             dd.classList.remove('active');
         }
     });
+
+    // 17. Live Activity Feed
+    initLiveActivityFeed();
 });
+
+
+// ==========================================
+// LIVE ACTIVITY FEED ENGINE
+// ==========================================
+
+function initLiveActivityFeed() {
+    var feed = document.getElementById('activityFeed');
+    if (!feed) return;
+
+    var trackingNum = 4821;
+    var maxItems = 7;
+
+    var events = [
+        { action: 'delivered in', dot: 'dot-green' },
+        { action: 'cleared customs in', dot: 'dot-blue' },
+        { action: 'picked up from', dot: 'dot-green' },
+        { action: 'arrived at', dot: 'dot-blue' },
+        { action: 'departed', dot: 'dot-orange' },
+        { action: 'in transit to', dot: 'dot-blue' },
+        { action: 'loaded onto vessel at', dot: 'dot-orange' },
+        { action: 'reached sorting hub in', dot: 'dot-blue' },
+        { action: 'out for delivery in', dot: 'dot-green' },
+        { action: 'scanned at facility in', dot: 'dot-blue' }
+    ];
+
+    var locations = [
+        'Rotterdam, NL', 'Dubai, UAE', 'Shanghai Port', 'São Paulo, BR',
+        'Narita Airport, JP', 'London, UK', 'Hamburg, DE', 'Singapore, SG',
+        'Los Angeles, US', 'Busan, KR', 'Antwerp, BE', 'Mumbai, IN',
+        'Hong Kong, HK', 'Sydney, AU', 'Cape Town, ZA', 'Toronto, CA',
+        'Jeddah, SA', 'Istanbul, TR', 'Bangkok, TH', 'Miami, US',
+        'Felixstowe, UK', 'Genoa, IT', 'Piraeus, GR', 'Barcelona, ES',
+        'Vancouver, CA', 'Yokohama, JP', 'Colombo, LK', 'Durban, ZA',
+        'Melbourne, AU', 'Karachi, PK', 'Lima, PE', 'Panama City, PA',
+        'Oslo, NO', 'Stockholm, SE', 'Helsinki, FI', 'Warsaw, PL',
+        'Lisbon, PT', 'Dublin, IE', 'Marseille, FR', 'Mombasa, KE'
+    ];
+
+    var usedCombos = new Set();
+
+    function getUniqueEvent() {
+        var combo;
+        var evt, loc;
+        var attempts = 0;
+        do {
+            evt = events[Math.floor(Math.random() * events.length)];
+            loc = locations[Math.floor(Math.random() * locations.length)];
+            combo = evt.action + '|' + loc;
+            attempts++;
+            if (attempts > 80) { usedCombos.clear(); }
+        } while (usedCombos.has(combo));
+        usedCombos.add(combo);
+        if (usedCombos.size > 300) {
+            var arr = Array.from(usedCombos);
+            usedCombos = new Set(arr.slice(arr.length - 100));
+        }
+        return { evt: evt, loc: loc };
+    }
+
+    function createItem(secondsAgo) {
+        trackingNum++;
+        var padded = String(trackingNum).padStart(6, '0');
+        var pick = getUniqueEvent();
+        var timeText = secondsAgo < 60 ? 'just now' :
+                       secondsAgo < 120 ? '1 min ago' :
+                       Math.floor(secondsAgo / 60) + ' min ago';
+
+        var item = document.createElement('div');
+        item.className = 'activity-item';
+        item.innerHTML =
+            '<div class="activity-dot ' + pick.evt.dot + '"></div>' +
+            '<div class="activity-content">' +
+                '<p><strong>TOX-2026-' + padded + '</strong> ' + pick.evt.action + ' <strong>' + pick.loc + '</strong></p>' +
+                '<span class="activity-time">' + timeText + '</span>' +
+            '</div>';
+        return item;
+    }
+
+    // Seed initial items
+    var seedTimes = [120, 300, 480, 720, 960, 1200, 1500];
+    for (var i = 0; i < seedTimes.length; i++) {
+        feed.appendChild(createItem(seedTimes[i]));
+    }
+
+    // Add new entry every 4-9 seconds
+    function addNewEntry() {
+        var newItem = createItem(0);
+        newItem.style.opacity = '0';
+        newItem.style.transform = 'translateX(-20px)';
+        newItem.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+        feed.insertBefore(newItem, feed.firstChild);
+
+        // Animate in
+        requestAnimationFrame(function() {
+            requestAnimationFrame(function() {
+                newItem.style.opacity = '1';
+                newItem.style.transform = 'translateX(0)';
+            });
+        });
+
+        // Remove oldest if over max
+        while (feed.children.length > maxItems) {
+            var last = feed.lastChild;
+            last.style.opacity = '0';
+            last.style.transition = 'opacity 0.3s ease';
+            setTimeout(function(el) { if (el.parentNode) el.parentNode.removeChild(el); }, 300, last);
+        }
+
+        // Age existing timestamps
+        var items = feed.querySelectorAll('.activity-time');
+        for (var j = 0; j < items.length; j++) {
+            var txt = items[j].textContent;
+            if (txt === 'just now') { items[j].textContent = '1 min ago'; }
+            else {
+                var m = txt.match(/(\d+)\s*min/);
+                if (m) { items[j].textContent = (parseInt(m[1]) + 1) + ' min ago'; }
+            }
+        }
+
+        // Schedule next (random 4-9 seconds)
+        var next = 4000 + Math.floor(Math.random() * 5000);
+        setTimeout(addNewEntry, next);
+    }
+
+    // Start after first delay
+    setTimeout(addNewEntry, 4000 + Math.floor(Math.random() * 3000));
+}
 
 
 // ==========================================
