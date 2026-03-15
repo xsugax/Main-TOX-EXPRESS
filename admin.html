@@ -3241,12 +3241,38 @@
                 return;
             }
 
+        // ==================== PROFESSIONAL TRACKING ID GENERATOR ====================
+        function generateTrackingId(type, origin, destination) {
+            var year = new Date().getFullYear();
+            var month = String(new Date().getMonth() + 1).padStart(2, '0');
+            var day = String(new Date().getDate()).padStart(2, '0');
+
+            // Service prefix based on shipment type
+            var serviceCodes = {
+                'Ocean Freight': 'SEA', 'Air Cargo': 'AIR', 'Ground Transport': 'GND',
+                'Rail Freight': 'RIL', 'Express': 'EXP', 'Multimodal': 'MLT'
+            };
+            var svc = serviceCodes[type] || 'GEN';
+
+            // Route code: first 2 letters of origin + first 2 of destination (uppercase)
+            var orig = (origin || 'XX').replace(/[^A-Za-z]/g, '').substring(0, 2).toUpperCase();
+            var dest = (destination || 'XX').replace(/[^A-Za-z]/g, '').substring(0, 2).toUpperCase();
+
+            // Unique sequence: timestamp-derived 6-digit number + 2 random alphanumeric chars
+            var seq = String(Date.now()).slice(-6);
+            var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            var check = chars.charAt(Math.floor(Math.random() * chars.length)) + chars.charAt(Math.floor(Math.random() * chars.length));
+
+            // Format: TOX-SEA-SHRO-260315-849271-K7
+            return 'TOX-' + svc + '-' + orig + dest + '-' + String(year).slice(-2) + month + day + '-' + seq + '-' + check;
+        }
+
             if (origin === destination) {
                 toast('Origin and destination must differ', 'error');
                 return;
             }
 
-            const shipmentId = 'TOX-' + new Date().getFullYear() + '-' + String(Math.floor(Math.random() * 900000) + 100000);
+            const shipmentId = generateTrackingId(type, origin, destination);
 
             const shipmentData = {
                 id: shipmentId, origin, destination, type, status, eta, description, priority, incoterms,
