@@ -1195,7 +1195,7 @@ function triggerGoogleTranslate(lang) {
         // Reset to original
         document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=' + domain;
         document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/';
-        // Use Google Translate API to reset instead of page reload
+        // Use the API to reset without reloading
         var frame = document.querySelector('.goog-te-combo');
         if (frame) {
             frame.value = 'en';
@@ -1206,7 +1206,7 @@ function triggerGoogleTranslate(lang) {
     document.cookie = 'googtrans=/en/' + lang + '; path=/; domain=' + domain;
     document.cookie = 'googtrans=/en/' + lang + '; path=/';
 
-    // If the translate element exists, use its API
+    // Use the translate combo API (no page reload)
     var frame = document.querySelector('.goog-te-combo');
     if (frame) {
         frame.value = lang;

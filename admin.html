@@ -1819,7 +1819,6 @@
         let currentShipmentId = null;
         let backdateLog = JSON.parse(localStorage.getItem('toxBackdateLog') || '[]');
 
-
         // Check persisted session (with timeout validation)
         const savedToken = localStorage.getItem('toxAdminToken');
         const savedSession = parseInt(localStorage.getItem('toxAdminSession') || '0');
@@ -1910,7 +1909,6 @@
             localStorage.removeItem('toxAdminSession');
             adminToken = null;
             clearTimeout(sessionTimer);
-
             document.getElementById('adminShell').style.display = 'none';
             document.getElementById('loginScreen').style.display = 'flex';
             document.getElementById('adminUser').value = '';
