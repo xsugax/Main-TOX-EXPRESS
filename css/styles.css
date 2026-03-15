@@ -1463,6 +1463,133 @@ img { max-width: 100%; height: auto; display: block; }
 .legend-dot.current { background: var(--tox-red); box-shadow: 0 0 8px rgba(230, 57, 70, 0.6); }
 .legend-dot.destination { background: var(--tox-gold); }
 
+/* === Tracking Result Display === */
+.track-loading, .track-error {
+    text-align: center;
+    padding: 40px 20px;
+    font-size: 1.1rem;
+    color: #64748b;
+}
+.track-loading i, .track-error i { margin-right: 8px; color: var(--tox-red); }
+.track-error { color: #ef4444; }
+
+.track-not-found {
+    text-align: center;
+    padding: 40px 20px;
+}
+.track-not-found-icon { font-size: 3rem; color: #cbd5e1; margin-bottom: 16px; }
+.track-not-found h3 { color: var(--tox-navy); margin: 0 0 8px; font-size: 1.4rem; }
+.track-not-found p { color: #64748b; margin: 0 0 20px; }
+.track-tips { text-align: left; max-width: 400px; margin: 0 auto; background: #f8fafc; border-radius: 10px; padding: 16px 20px; }
+.track-tips p { font-weight: 700; color: var(--tox-navy); margin: 0 0 8px; font-size: 0.9rem; }
+.track-tips ul { margin: 0; padding-left: 18px; }
+.track-tips li { color: #64748b; font-size: 0.85rem; margin-bottom: 6px; }
+.track-tips code { background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-size: 0.85rem; }
+.track-tips a { color: var(--tox-red); }
+
+.track-card {
+    background: white;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+    border: 1px solid #e2e8f0;
+}
+
+.track-status-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 24px;
+}
+.track-status-icon { font-size: 2.2rem; }
+.track-status-label { font-size: 1.3rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
+.track-id { font-family: 'Courier New', monospace; font-size: 0.95rem; color: #64748b; font-weight: 600; margin-top: 2px; letter-spacing: 1px; }
+
+.track-progress-wrap { padding: 0 24px 20px; }
+.track-progress-bar { height: 8px; background: #e2e8f0; border-radius: 8px; overflow: hidden; }
+.track-progress-fill { height: 100%; border-radius: 8px; transition: width 0.6s ease; }
+.track-progress-pct { text-align: right; font-size: 0.8rem; color: #94a3b8; font-weight: 600; margin-top: 4px; }
+
+.track-route {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    padding: 20px 24px;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
+}
+.track-route-point { text-align: center; }
+.track-route-dot { width: 14px; height: 14px; border-radius: 50%; margin: 0 auto 6px; border: 3px solid white; box-shadow: 0 0 0 2px #cbd5e1; }
+.track-route-dot.origin { background: #22c55e; box-shadow: 0 0 0 2px #22c55e44; }
+.track-route-dot.dest { background: var(--tox-red); box-shadow: 0 0 0 2px rgba(230,57,70,0.3); }
+.track-route-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; font-weight: 700; }
+.track-route-city { font-size: 1.1rem; font-weight: 800; color: var(--tox-navy); margin-top: 2px; }
+.track-route-line { color: var(--tox-red); font-size: 1.2rem; position: relative; }
+.track-route-line::before, .track-route-line::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    height: 2px;
+    width: 30px;
+    background: linear-gradient(90deg, #22c55e, #E63946);
+}
+.track-route-line::before { right: 100%; margin-right: 6px; }
+.track-route-line::after { left: 100%; margin-left: 6px; }
+
+.track-details-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 16px;
+    padding: 24px;
+}
+.track-detail { background: #f8fafc; border-radius: 10px; padding: 14px; border: 1px solid #e2e8f0; }
+.track-detail-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; font-weight: 700; margin-bottom: 4px; }
+.track-detail-value { font-size: 0.95rem; font-weight: 700; color: var(--tox-navy); }
+
+.track-timeline { padding: 8px 24px 24px; }
+.track-timeline h4 { color: var(--tox-navy); font-size: 1rem; margin: 0 0 16px; }
+.track-timeline h4 i { color: var(--tox-red); margin-right: 6px; }
+
+.track-timeline-item {
+    display: flex;
+    gap: 14px;
+    padding-bottom: 20px;
+    position: relative;
+}
+.track-timeline-item:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    left: 7px;
+    top: 18px;
+    bottom: 0;
+    width: 2px;
+    background: #e2e8f0;
+}
+.track-timeline-item.completed:not(:last-child)::before { background: #22c55e; }
+.track-timeline-dot { width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; margin-top: 2px; }
+.track-timeline-item.pending .track-timeline-dot { border: 2px dashed #cbd5e1; background: white; }
+.track-timeline-time { font-size: 0.8rem; color: #94a3b8; font-weight: 600; }
+.track-timeline-event { font-size: 0.95rem; font-weight: 700; color: var(--tox-navy); }
+.track-timeline-location { font-size: 0.8rem; color: #64748b; }
+.track-timeline-location i { color: var(--tox-red); margin-right: 4px; font-size: 0.7rem; }
+
+.track-description {
+    padding: 16px 24px 24px;
+    font-size: 0.9rem;
+    color: #64748b;
+    border-top: 1px solid #e2e8f0;
+}
+.track-description i { color: #3b82f6; margin-right: 6px; }
+
+@media (max-width: 768px) {
+    .track-route { flex-direction: column; gap: 8px; }
+    .track-route-line::before, .track-route-line::after { display: none; }
+    .track-details-grid { grid-template-columns: 1fr 1fr; }
+    .track-status-header { padding: 16px; }
+}
+
 
 /* ===================================================================
    CARGO / ACTIVE SHIPMENTS

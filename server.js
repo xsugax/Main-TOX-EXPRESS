@@ -226,13 +226,34 @@ app.use((req, res, next) => {
 
 // Get shipment tracking info (rate limited)
 app.get('/api/track/:shipmentId', rateLimit(60000, 20), (req, res) => {
-    // Validate shipment ID format
-    if (!/^TOX-\d{4}-\d{3,6}$/.test(req.params.shipmentId)) {
+    // Accept both old format (TOX-2026-123456) and new format (TOX-SEA-SHRO-260315-849271-K7)
+    if (!/^TOX-[A-Z0-9-]{5,40}$/.test(req.params.shipmentId)) {
         return res.status(400).json({ error: 'Invalid tracking number format' });
     }
     const shipments = JSON.parse(fs.readFileSync(shipmentsFile, 'utf8'));
     const shipment = shipments.find(s => s.id === req.params.shipmentId);
-    res.json(shipment || { error: 'Shipment not found' });
+    if (!shipment) {
+        return res.status(404).json({ error: 'Shipment not found', trackingId: req.params.shipmentId });
+    }
+    // Return only public-safe fields (not client personal data)
+    res.json({
+        id: shipment.id,
+        origin: shipment.origin,
+        destination: shipment.destination,
+        status: shipment.status,
+        type: shipment.type,
+        eta: shipment.eta,
+        progress: shipment.progress || 0,
+        description: shipment.description || '',
+        priority: shipment.priority || 'Standard',
+        weight: shipment.weight || null,
+        pieces: shipment.pieces || 1,
+        packaging: shipment.packaging || '',
+        pickupDate: shipment.pickupDate || '',
+        createdAt: shipment.createdAt || '',
+        timeline: shipment.timeline || [],
+        current_location: shipment.current_location || ''
+    });
 });
 
 // ==================== ADMIN API ====================
