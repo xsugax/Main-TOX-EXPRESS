@@ -28,6 +28,72 @@
             --text-muted: #5a6478;
         }
 
+        /* Light theme override */
+        [data-admin-theme="light"] {
+            --admin-bg: #f0f2f5;
+            --admin-surface: #ffffff;
+            --admin-card: #ffffff;
+            --admin-border: rgba(29, 53, 87, 0.12);
+            --admin-border-active: rgba(230, 57, 70, 0.35);
+            --text-primary: #1a1a2e;
+            --text-secondary: #5a6478;
+            --text-muted: #8892a8;
+        }
+        [data-admin-theme="light"] .login-screen {
+            background: linear-gradient(145deg, #e8ecf1 0%, #dce3eb 50%, #c5d0dc 100%);
+        }
+        [data-admin-theme="light"] .login-card {
+            box-shadow: 0 20px 60px rgba(0,0,0,0.12);
+        }
+        [data-admin-theme="light"] .admin-topbar {
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        }
+        [data-admin-theme="light"] .topbar-logo span {
+            color: var(--tox-navy);
+        }
+        [data-admin-theme="light"] .topbar-title {
+            color: var(--tox-navy);
+        }
+        [data-admin-theme="light"] input,
+        [data-admin-theme="light"] select,
+        [data-admin-theme="light"] textarea {
+            background: #f8f9fb;
+            color: #1a1a2e;
+            border-color: rgba(29, 53, 87, 0.15);
+        }
+        [data-admin-theme="light"] input:focus,
+        [data-admin-theme="light"] select:focus,
+        [data-admin-theme="light"] textarea:focus {
+            background: #fff;
+        }
+        [data-admin-theme="light"] .stat-card {
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+        }
+        [data-admin-theme="light"] .modal-inner {
+            background: #fff;
+            box-shadow: 0 30px 80px rgba(0,0,0,0.18);
+        }
+
+        /* Theme toggle button */
+        .theme-toggle-btn {
+            padding: 6px 14px;
+            background: rgba(232, 200, 74, 0.1);
+            border: 1px solid rgba(232, 200, 74, 0.25);
+            border-radius: 50px;
+            color: var(--tox-gold);
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .theme-toggle-btn:hover {
+            background: rgba(232, 200, 74, 0.2);
+            border-color: var(--tox-gold);
+        }
+
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             background: var(--admin-bg);
@@ -1414,6 +1480,10 @@
                         <div id="notifList"><div class="empty-state" style="padding:24px;"><i class="fas fa-bell-slash" style="font-size:1.5rem;"></i><p style="margin-top:8px;color:var(--text-muted);font-size:0.82rem;">No notifications</p></div></div>
                     </div>
                 </div>
+                <button class="theme-toggle-btn" id="adminThemeToggle" onclick="toggleAdminTheme()" title="Toggle Light/Dark Mode">
+                    <i class="fas fa-moon" id="themeToggleIcon"></i>
+                    <span id="themeToggleLabel">Dark</span>
+                </button>
                 <div class="topbar-status"><span class="status-dot"></span> System Online</div>
                 <button class="btn-logout" onclick="handleLogout()"><i class="fas fa-power-off"></i> Logout</button>
             </div>
@@ -2738,6 +2808,36 @@
         let selectedDocType = null;
         let generatedDocs = JSON.parse(localStorage.getItem('toxGeneratedDocs') || '[]');
         let adminSettings = JSON.parse(localStorage.getItem('toxAdminSettings') || '{}');
+
+        // ==================== THEME TOGGLE ====================
+        (function initAdminTheme() {
+            var saved = localStorage.getItem('toxAdminTheme');
+            if (saved === 'light') {
+                document.documentElement.setAttribute('data-admin-theme', 'light');
+            }
+            updateThemeButton();
+        })();
+
+        function toggleAdminTheme() {
+            var isLight = document.documentElement.getAttribute('data-admin-theme') === 'light';
+            if (isLight) {
+                document.documentElement.removeAttribute('data-admin-theme');
+                localStorage.setItem('toxAdminTheme', 'dark');
+            } else {
+                document.documentElement.setAttribute('data-admin-theme', 'light');
+                localStorage.setItem('toxAdminTheme', 'light');
+            }
+            updateThemeButton();
+        }
+
+        function updateThemeButton() {
+            var icon = document.getElementById('themeToggleIcon');
+            var label = document.getElementById('themeToggleLabel');
+            if (!icon) return;
+            var isLight = document.documentElement.getAttribute('data-admin-theme') === 'light';
+            icon.className = isLight ? 'fas fa-sun' : 'fas fa-moon';
+            if (label) label.textContent = isLight ? 'Light' : 'Dark';
+        }
 
         // Check persisted session (with timeout validation)
         const savedToken = localStorage.getItem('toxAdminToken');
