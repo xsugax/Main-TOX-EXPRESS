@@ -1,9 +1,37 @@
+require('dotenv').config();
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const nodemailer = require('nodemailer');
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// ==================== EMAIL TRANSPORTER ====================
+let emailTransporter = null;
+let emailReady = false;
+
+if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
+    emailTransporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASSWORD
+        },
+        tls: { rejectUnauthorized: true }
+    });
+    emailTransporter.verify(function(err) {
+        if (err) {
+            console.log('  ⚠️  Email transporter verification failed:', err.message);
+            emailReady = false;
+        } else {
+            console.log('  ✅ Email transporter ready — emails will be sent via SMTP');
+            emailReady = true;
+        }
+    });
+} else {
+    console.log('  ⚠️  EMAIL_USER / EMAIL_PASSWORD not set — email sending disabled');
+}
 
 // ==================== SECURITY: Rate Limiting ====================
 const rateLimitMap = new Map();
@@ -358,6 +386,76 @@ app.get('/api/admin/stats', verifyAdminToken, (req, res) => {
     });
 });
 
+// ==================== EMAIL ENDPOINTS ====================
+app.get('/api/admin/email-status', verifyAdminToken, (req, res) => {
+    res.json({ connected: emailReady });
+});
+
+app.post('/api/admin/send-email', verifyAdminToken, rateLimit(60000, 20), (req, res) => {
+    if (!emailReady || !emailTransporter) {
+        return res.status(503).json({ success: false, error: 'Email server not configured. Set EMAIL_USER and EMAIL_PASSWORD in .env' });
+    }
+
+    var to = req.body.to;
+    var subject = req.body.subject;
+    var html = req.body.html;
+    var clientName = req.body.clientName;
+    var shipmentId = req.body.shipmentId;
+
+    if (!to || !subject || !html) {
+        return res.status(400).json({ success: false, error: 'Missing required fields: to, subject, html' });
+    }
+
+    // Basic email validation
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
+        return res.status(400).json({ success: false, error: 'Invalid email address' });
+    }
+
+    // Strip any script tags from HTML for safety
+    var safeHtml = html.replace(/<script[\s\S]*?<\/script>/gi, '');
+
+    // Generate plain text version for anti-spam compliance
+    var plainText = 'Dear ' + (clientName || 'Valued Client') + ',\n\n' +
+        safeHtml.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&bull;/g, '•').replace(/&copy;/g, '©').substring(0, 4000) +
+        '\n\n---\nTOX Express Delivery Services\n500 TOX Tower, Marina Boulevard, Singapore 018989\nthetoxexpressdeliveryservices@gmail.com | +1-800-TOX-SHIP\nhttps://toxexpress.org';
+
+    var mailOptions = {
+        from: '"TOX Express" <' + process.env.EMAIL_USER + '>',
+        to: to,
+        subject: subject,
+        html: safeHtml,
+        text: plainText,
+        replyTo: process.env.EMAIL_USER,
+        headers: {
+            'X-Mailer': 'TOX Express Logistics',
+            'Organization': 'TOX Express Delivery Services',
+            'List-Unsubscribe': '<mailto:' + process.env.EMAIL_USER + '?subject=Unsubscribe>',
+            'Precedence': 'bulk'
+        }
+    };
+
+    emailTransporter.sendMail(mailOptions, function(err, info) {
+        if (err) {
+            console.error('Email send error:', err.message);
+            return res.status(500).json({ success: false, error: 'Failed to send: ' + err.message });
+        }
+
+        // Audit log the email send
+        try {
+            var auditLog = JSON.parse(fs.readFileSync(auditLogFile, 'utf8'));
+            auditLog.push({
+                action: 'email_sent',
+                details: 'Email sent to ' + to + ' — Subject: ' + subject + (shipmentId ? ' [' + shipmentId + ']' : ''),
+                timestamp: new Date().toISOString(),
+                ip: req.ip || req.connection.remoteAddress
+            });
+            fs.writeFileSync(auditLogFile, JSON.stringify(auditLog, null, 2));
+        } catch(e) { /* audit log write failed — non-critical */ }
+
+        res.json({ success: true, messageId: info.messageId });
+    });
+});
+
 // Initialize and start server
 initializeDataFiles();
 
@@ -376,6 +474,7 @@ app.listen(PORT, () => {
     ║  ✓ Shipment Management (Status, Cancel, Delivery)           ║
     ║  ✓ Regulatory Audit Logs                                    ║
     ║  ✓ Admin Dashboard with Real-time Stats                     ║
+    ║  ✓ Professional Email System (Nodemailer SMTP)              ║
     ║                                                                ║
     ╚════════════════════════════════════════════════════════════════╝
     `);
