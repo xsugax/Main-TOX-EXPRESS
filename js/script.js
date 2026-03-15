@@ -115,26 +115,53 @@ function initNavbar() {
 // ==========================================
 
 function animateCounters() {
-    var counters = document.querySelectorAll('.stat-number[data-count]');
+    var counters = document.querySelectorAll('.stat-number[data-target]');
     counters.forEach(function(counter) {
-        var target = parseInt(counter.getAttribute('data-count'));
-        var duration = 2000;
-        var start = 0;
+        var target = parseInt(counter.getAttribute('data-target'));
+        var duration = 2500;
         var startTime = null;
+
+        function easeOutExpo(t) {
+            return t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
+        }
 
         function step(timestamp) {
             if (!startTime) startTime = timestamp;
             var progress = Math.min((timestamp - startTime) / duration, 1);
-            var current = Math.floor(progress * target);
+            var easedProgress = easeOutExpo(progress);
+            var current = Math.floor(easedProgress * target);
             counter.textContent = current.toLocaleString();
             if (progress < 1) {
                 requestAnimationFrame(step);
             } else {
                 counter.textContent = target.toLocaleString();
+                startLivePulse(counter, target);
             }
         }
         requestAnimationFrame(step);
     });
+}
+
+function startLivePulse(counter, baseTarget) {
+    var label = counter.nextElementSibling ? counter.nextElementSibling.textContent.trim() : '';
+    if (label === 'Daily Shipments') {
+        setInterval(function() {
+            var fluctuation = Math.floor(Math.random() * 201) - 100;
+            counter.textContent = (baseTarget + fluctuation).toLocaleString();
+        }, 3000);
+    } else if (label === 'Countries') {
+        setInterval(function() {
+            var tick = Math.floor(Math.random() * 3);
+            counter.textContent = (baseTarget + tick).toLocaleString();
+        }, 8000);
+    } else if (label === '% On-Time') {
+        var values = [98.7, 99.1, 98.9, 99.3, 99.0, 98.8, 99.2];
+        var idx = 0;
+        setInterval(function() {
+            counter.textContent = values[idx % values.length].toFixed(1);
+            idx++;
+        }, 5000);
+    }
 }
 
 
