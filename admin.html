@@ -1895,6 +1895,12 @@
                                             <option value="Loading">Loading</option>
                                             <option value="In Transit">In Transit</option>
                                             <option value="In Flight">In Flight</option>
+                                            <option value="Customs Clearance">Customs Clearance</option>
+                                            <option value="Out for Delivery">Out for Delivery</option>
+                                            <option value="On Hold">On Hold</option>
+                                            <option value="Delayed">Delayed</option>
+                                            <option value="Delivered">Delivered</option>
+                                            <option value="Cancelled">Cancelled</option>
                                         </select>
                                     </div>
                                     <div class="form-group">
@@ -2594,9 +2600,12 @@
                         <option value="Loading">Loading</option>
                         <option value="In Transit">In Transit</option>
                         <option value="In Flight">In Flight</option>
+                        <option value="Customs Clearance">Customs Clearance</option>
+                        <option value="Out for Delivery">Out for Delivery</option>
                         <option value="On Hold">On Hold</option>
-                        <option value="Delivered">Delivered</option>
                         <option value="Delayed">Delayed</option>
+                        <option value="Delivered">Delivered</option>
+                        <option value="Cancelled">Cancelled</option>
                     </select>
                 </div>
                 <div class="modal-actions">
@@ -4039,9 +4048,9 @@
         function bulkUpdateStatus() {
             var ids = getSelectedIds();
             if (ids.length === 0) return;
-            var newStatus = prompt('Enter new status for ' + ids.length + ' shipment(s):\n(Processing, In Transit, Delivered, Cancelled)');
+            var newStatus = prompt('Enter new status for ' + ids.length + ' shipment(s):\n(Processing, Loading, In Transit, In Flight, Customs Clearance, Out for Delivery, On Hold, Delayed, Delivered, Cancelled)');
             if (!newStatus) return;
-            var valid = ['Processing', 'Loading', 'In Transit', 'In Flight', 'Delivered', 'Cancelled', 'On Hold'];
+            var valid = ['Processing', 'Loading', 'In Transit', 'In Flight', 'Customs Clearance', 'Out for Delivery', 'On Hold', 'Delayed', 'Delivered', 'Cancelled'];
             if (!valid.includes(newStatus)) { toast('Invalid status', 'error'); return; }
             allShipmentsCache.forEach(function(s) {
                 if (ids.includes(s.id)) s.status = newStatus;
