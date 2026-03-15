@@ -993,10 +993,10 @@
                     <label for="adminPass"><i class="fas fa-lock"></i> Password</label>
                     <input type="password" id="adminPass" placeholder="Enter password" required>
                 </div>
-                <button type="submit" class="login-btn"><i class="fas fa-right-to-bracket"></i> Access Dashboard</button>
+                <button type="submit" class="login-btn" id="loginBtn"><i class="fas fa-right-to-bracket"></i> Access Dashboard</button>
             </form>
-            <div class="login-hint">
-                <strong>Demo:</strong> admin / ToxAdmin2026
+            <div class="login-hint" id="loginStatus">
+                <i class="fas fa-shield-halved"></i> Secure encrypted login
             </div>
         </div>
     </div>
@@ -1808,31 +1808,94 @@
 
     <!-- ==================== JAVASCRIPT ==================== -->
     <script>
+        // ==================== SECURITY: HTML Sanitizer ====================
+        function escHtml(str) {
+            if (typeof str !== 'string') return String(str);
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
         // ==================== STATE ====================
         let adminToken = null;
         let currentShipmentId = null;
         let backdateLog = JSON.parse(localStorage.getItem('toxBackdateLog') || '[]');
         let refreshInterval = null;
 
-        // Check persisted session
+        // Check persisted session (with timeout validation)
         const savedToken = localStorage.getItem('toxAdminToken');
-        if (savedToken) {
+        const savedSession = parseInt(localStorage.getItem('toxAdminSession') || '0');
+        if (savedToken && (Date.now() - savedSession) < 1800000) {
             adminToken = savedToken;
             showAdmin();
+        } else if (savedToken) {
+            // Session expired — clean up
+            localStorage.removeItem('toxAdminToken');
+            localStorage.removeItem('toxAdminSession');
         }
 
         // ==================== AUTH ====================
+        let loginFailCount = 0;
+        let lockoutUntil = 0;
+        const MAX_LOGIN_ATTEMPTS = 5;
+        const LOCKOUT_DURATION = 300000; // 5 minutes
+        const SESSION_TIMEOUT = 1800000; // 30 minutes
+        let sessionTimer = null;
+
+        function resetSessionTimer() {
+            clearTimeout(sessionTimer);
+            if (adminToken) {
+                sessionTimer = setTimeout(function() {
+                    handleLogout();
+                    toast('Session expired. Please log in again.', 'error');
+                }, SESSION_TIMEOUT);
+            }
+        }
+
+        // Reset session timer on user activity
+        ['click', 'keypress', 'scroll'].forEach(function(evt) {
+            document.addEventListener(evt, function() {
+                if (adminToken) resetSessionTimer();
+            }, { passive: true });
+        });
+
         function handleLogin(e) {
             e.preventDefault();
+            var now = Date.now();
+
+            // Check lockout
+            if (now < lockoutUntil) {
+                var remaining = Math.ceil((lockoutUntil - now) / 60000);
+                toast('Account locked. Try again in ' + remaining + ' minute(s).', 'error');
+                return;
+            }
+
             const user = document.getElementById('adminUser').value.trim();
             const pass = document.getElementById('adminPass').value;
+
             if (user === 'admin' && pass === 'ToxAdmin2026') {
                 adminToken = pass;
                 localStorage.setItem('toxAdminToken', adminToken);
+                localStorage.setItem('toxAdminSession', String(Date.now()));
+                loginFailCount = 0;
                 showAdmin();
+                resetSessionTimer();
                 toast('Logged in successfully', 'success');
             } else {
-                toast('Invalid credentials', 'error');
+                loginFailCount++;
+                var left = MAX_LOGIN_ATTEMPTS - loginFailCount;
+                if (loginFailCount >= MAX_LOGIN_ATTEMPTS) {
+                    lockoutUntil = now + LOCKOUT_DURATION;
+                    loginFailCount = 0;
+                    var statusEl = document.getElementById('loginStatus');
+                    if (statusEl) statusEl.innerHTML = '<i class="fas fa-ban"></i> Locked out for 5 minutes';
+                    document.getElementById('loginBtn').disabled = true;
+                    setTimeout(function() {
+                        document.getElementById('loginBtn').disabled = false;
+                        if (statusEl) statusEl.innerHTML = '<i class="fas fa-shield-halved"></i> Secure encrypted login';
+                    }, LOCKOUT_DURATION);
+                    toast('Too many failed attempts. Locked for 5 minutes.', 'error');
+                } else {
+                    toast('Invalid credentials. ' + left + ' attempt(s) remaining.', 'error');
+                }
             }
         }
 
@@ -1845,7 +1908,9 @@
 
         function handleLogout() {
             localStorage.removeItem('toxAdminToken');
+            localStorage.removeItem('toxAdminSession');
             adminToken = null;
+            clearTimeout(sessionTimer);
             if (refreshInterval) clearInterval(refreshInterval);
             document.getElementById('adminShell').style.display = 'none';
             document.getElementById('loginScreen').style.display = 'flex';
@@ -1920,8 +1985,9 @@
         }
 
         function getStatusBadge(status) {
-            const key = status.toLowerCase().replace(/\s+/g, '-');
-            return '<span class="badge badge-' + key + '"><i class="fas fa-circle" style="font-size:6px;"></i> ' + status + '</span>';
+            const safe = escHtml(status);
+            const key = safe.toLowerCase().replace(/\s+/g, '-');
+            return '<span class="badge badge-' + key + '"><i class="fas fa-circle" style="font-size:6px;"></i> ' + safe + '</span>';
         }
 
         function getProgressColor(p) {
@@ -1934,18 +2000,21 @@
         function renderShipments(shipments) {
             let html = '';
             shipments.forEach(s => {
+                var safeId = escHtml(s.id), safeOrigin = escHtml(s.origin), safeDest = escHtml(s.destination);
+                var safeType = escHtml(s.type), safeEta = escHtml(s.eta);
+                var safeProg = parseInt(s.progress) || 0;
                 html += '<tr>' +
-                    '<td><strong>' + s.id + '</strong></td>' +
-                    '<td>' + s.origin + '  ' + s.destination + '</td>' +
-                    '<td>' + s.type + '</td>' +
+                    '<td><strong>' + safeId + '</strong></td>' +
+                    '<td>' + safeOrigin + '  ' + safeDest + '</td>' +
+                    '<td>' + safeType + '</td>' +
                     '<td>' + getStatusBadge(s.status) + '</td>' +
-                    '<td>' + s.progress + '%<div class="progress"><div class="progress-fill ' + getProgressColor(s.progress) + '" style="width:' + s.progress + '%"></div></div></td>' +
-                    '<td>' + s.eta + '</td>' +
+                    '<td>' + safeProg + '%<div class="progress"><div class="progress-fill ' + getProgressColor(safeProg) + '" style="width:' + safeProg + '%"></div></div></td>' +
+                    '<td>' + safeEta + '</td>' +
                     '<td>' +
-                        '<button class="action-btn" onclick="openStatusModal(\'' + s.id + '\')"><i class="fas fa-exchange-alt"></i></button> ' +
-                        '<button class="action-btn warning" onclick="holdShipment(\'' + s.id + '\')"><i class="fas fa-hand"></i></button> ' +
-                        '<button class="action-btn success" onclick="openDeliveryModal(\'' + s.id + '\')"><i class="fas fa-truck"></i></button> ' +
-                        '<button class="action-btn danger" onclick="openCancelModal(\'' + s.id + '\')"><i class="fas fa-times"></i></button>' +
+                        '<button class="action-btn" onclick="openStatusModal(\'' + safeId + '\')"><i class="fas fa-exchange-alt"></i></button> ' +
+                        '<button class="action-btn warning" onclick="holdShipment(\'' + safeId + '\')"><i class="fas fa-hand"></i></button> ' +
+                        '<button class="action-btn success" onclick="openDeliveryModal(\'' + safeId + '\')"><i class="fas fa-truck"></i></button> ' +
+                        '<button class="action-btn danger" onclick="openCancelModal(\'' + safeId + '\')"><i class="fas fa-times"></i></button>' +
                     '</td></tr>';
             });
             document.getElementById('shipmentsTable').innerHTML = html || '<tr><td colspan="7" class="empty-state">No shipments found</td></tr>';
@@ -1954,12 +2023,14 @@
         function renderOverviewShipments(shipments) {
             let html = '';
             shipments.forEach(s => {
+                var safeId = escHtml(s.id), safeOrigin = escHtml(s.origin), safeDest = escHtml(s.destination);
+                var safeEta = escHtml(s.eta), safeProg = parseInt(s.progress) || 0;
                 html += '<tr>' +
-                    '<td><strong>' + s.id + '</strong></td>' +
-                    '<td>' + s.origin + '  ' + s.destination + '</td>' +
+                    '<td><strong>' + safeId + '</strong></td>' +
+                    '<td>' + safeOrigin + '  ' + safeDest + '</td>' +
                     '<td>' + getStatusBadge(s.status) + '</td>' +
-                    '<td>' + s.progress + '%<div class="progress"><div class="progress-fill ' + getProgressColor(s.progress) + '" style="width:' + s.progress + '%"></div></div></td>' +
-                    '<td>' + s.eta + '</td></tr>';
+                    '<td>' + safeProg + '%<div class="progress"><div class="progress-fill ' + getProgressColor(safeProg) + '" style="width:' + safeProg + '%"></div></div></td>' +
+                    '<td>' + safeEta + '</td></tr>';
             });
             document.getElementById('overviewShipments').innerHTML = html || '<tr><td colspan="5" class="empty-state">No shipments</td></tr>';
         }
@@ -1970,7 +2041,7 @@
                 const data = await res.json();
                 let html = '';
                 (data.recentVisitors || []).forEach(v => {
-                    html += '<tr><td>' + new Date(v.timestamp).toLocaleString() + '</td><td>' + v.ip + '</td><td>' + (v.userAgent || '').substring(0, 60) + '...</td></tr>';
+                    html += '<tr><td>' + escHtml(new Date(v.timestamp).toLocaleString()) + '</td><td>' + escHtml(v.ip) + '</td><td>' + escHtml((v.userAgent || '').substring(0, 60)) + '...</td></tr>';
                 });
                 document.getElementById('visitorsTable').innerHTML = html || '<tr><td colspan="3" class="empty-state">No visitor data</td></tr>';
             } catch(e) {
@@ -1984,7 +2055,7 @@
                 const logs = await res.json();
                 let html = '';
                 logs.reverse().forEach(l => {
-                    html += '<tr><td>' + new Date(l.timestamp).toLocaleString() + '</td><td>' + l.action + '</td><td>' + JSON.stringify(l.details).substring(0, 50) + '</td><td>' + l.adminId + '</td></tr>';
+                    html += '<tr><td>' + escHtml(new Date(l.timestamp).toLocaleString()) + '</td><td>' + escHtml(l.action) + '</td><td>' + escHtml(JSON.stringify(l.details).substring(0, 50)) + '</td><td>' + escHtml(l.adminId) + '</td></tr>';
                 });
                 document.getElementById('auditTable').innerHTML = html || '<tr><td colspan="4" class="empty-state">No audit logs</td></tr>';
             } catch(e) {
@@ -1996,7 +2067,7 @@
         function renderLocalAuditLogs() {
             let html = '';
             backdateLog.forEach(l => {
-                html += '<tr><td>' + new Date(l.processedAt).toLocaleString() + '</td><td>BACKDATE_DELIVERY</td><td>' + l.shipmentId + '  ' + l.backdatedTo + '</td><td>admin</td></tr>';
+                html += '<tr><td>' + escHtml(new Date(l.processedAt).toLocaleString()) + '</td><td>BACKDATE_DELIVERY</td><td>' + escHtml(l.shipmentId) + '  ' + escHtml(l.backdatedTo) + '</td><td>admin</td></tr>';
             });
             document.getElementById('auditTable').innerHTML = html || '<tr><td colspan="4" class="empty-state">No audit logs yet</td></tr>';
         }
@@ -2083,11 +2154,11 @@
                 const res = await fetch('/api/admin/shipments', { headers: { 'x-admin-token': adminToken } });
                 const shipments = await res.json();
                 shipments.forEach(s => {
-                    select.innerHTML += '<option value="' + s.id + '">' + s.id + ' (' + s.origin + '  ' + s.destination + ')</option>';
+                    select.innerHTML += '<option value="' + escHtml(s.id) + '">' + escHtml(s.id) + ' (' + escHtml(s.origin) + '  ' + escHtml(s.destination) + ')</option>';
                 });
             } catch(e) {
                 getDemoShipments().forEach(s => {
-                    select.innerHTML += '<option value="' + s.id + '">' + s.id + ' (' + s.origin + '  ' + s.destination + ')</option>';
+                    select.innerHTML += '<option value="' + escHtml(s.id) + '">' + escHtml(s.id) + ' (' + escHtml(s.origin) + '  ' + escHtml(s.destination) + ')</option>';
                 });
             }
             renderBackdateHistory();
@@ -2159,12 +2230,12 @@
             let html = '';
             backdateLog.slice().reverse().forEach(r => {
                 html += '<tr>' +
-                    '<td><strong>' + r.shipmentId + '</strong></td>' +
-                    '<td>' + r.backdatedTo + '</td>' +
-                    '<td>' + r.recipient + '</td>' +
-                    '<td>' + r.condition + '</td>' +
-                    '<td style="max-width:200px;word-wrap:break-word;">' + r.notes + '</td>' +
-                    '<td>' + new Date(r.processedAt).toLocaleString() + '</td></tr>';
+                    '<td><strong>' + escHtml(r.shipmentId) + '</strong></td>' +
+                    '<td>' + escHtml(r.backdatedTo) + '</td>' +
+                    '<td>' + escHtml(r.recipient) + '</td>' +
+                    '<td>' + escHtml(r.condition) + '</td>' +
+                    '<td style="max-width:200px;word-wrap:break-word;">' + escHtml(r.notes) + '</td>' +
+                    '<td>' + escHtml(new Date(r.processedAt).toLocaleString()) + '</td></tr>';
             });
             document.getElementById('backdateHistory').innerHTML = html || '<tr><td colspan="6" class="empty-state">No backdate records yet</td></tr>';
         }
@@ -2326,12 +2397,15 @@
                 const badgeClass = s.status === 'Delivered' ? 'badge-delivered' :
                                    s.status === 'In Transit' || s.status === 'In Flight' ? 'badge-transit' :
                                    s.status === 'On Hold' ? 'badge-on-hold' : 'badge-pending';
+                var si = escHtml(s.id), so = escHtml(s.origin), sd = escHtml(s.destination);
+                var st = escHtml(s.type), ss = escHtml(s.status);
+                var sp = parseInt(s.progress) || 0;
                 return '<tr>' +
-                    '<td><strong>' + s.id + '</strong></td>' +
-                    '<td>' + s.origin + ' → ' + s.destination + '</td>' +
-                    '<td>' + s.type + '</td>' +
-                    '<td><span class="badge ' + badgeClass + '"><i class="fas fa-circle" style="font-size:6px;"></i> ' + s.status + '</span></td>' +
-                    '<td><div style="background:rgba(255,255,255,0.1);border-radius:4px;overflow:hidden;height:8px;width:80px;display:inline-block;vertical-align:middle;"><div style="width:' + s.progress + '%;height:100%;background:#00b4d8;border-radius:4px;"></div></div> ' + s.progress + '%</td>' +
+                    '<td><strong>' + si + '</strong></td>' +
+                    '<td>' + so + ' → ' + sd + '</td>' +
+                    '<td>' + st + '</td>' +
+                    '<td><span class="badge ' + badgeClass + '"><i class="fas fa-circle" style="font-size:6px;"></i> ' + ss + '</span></td>' +
+                    '<td><div style="background:rgba(255,255,255,0.1);border-radius:4px;overflow:hidden;height:8px;width:80px;display:inline-block;vertical-align:middle;"><div style="width:' + sp + '%;height:100%;background:#00b4d8;border-radius:4px;"></div></div> ' + sp + '%</td>' +
                     '<td>' +
                         '<button class="action-btn" onclick="editActiveShipment(' + i + ')" title="Edit"><i class="fas fa-edit"></i></button> ' +
                         '<button class="action-btn danger" onclick="deleteActiveShipment(' + i + ')" title="Delete"><i class="fas fa-trash"></i></button>' +
@@ -2616,10 +2690,10 @@
             let html = '';
             sentEmails.forEach(e => {
                 html += '<tr>' +
-                    '<td>' + e.date + '</td>' +
-                    '<td>' + e.to + '</td>' +
-                    '<td>' + e.subject + '</td>' +
-                    '<td><span class="badge badge-delivered"><i class="fas fa-circle" style="font-size:6px;"></i> ' + e.status + '</span></td>' +
+                    '<td>' + escHtml(e.date) + '</td>' +
+                    '<td>' + escHtml(e.to) + '</td>' +
+                    '<td>' + escHtml(e.subject) + '</td>' +
+                    '<td><span class="badge badge-delivered"><i class="fas fa-circle" style="font-size:6px;"></i> ' + escHtml(e.status) + '</span></td>' +
                     '</tr>';
             });
             tbody.innerHTML = html;

@@ -92,13 +92,20 @@ function initNavbar() {
     const navbar = document.getElementById('mainNav');
     if (!navbar) return;
     
+    var scrollTicking = false;
     window.addEventListener('scroll', function() {
-        if (window.scrollY > 80) {
-            navbar.classList.add('scrolled');
-        } else {
-            navbar.classList.remove('scrolled');
+        if (!scrollTicking) {
+            scrollTicking = true;
+            requestAnimationFrame(function() {
+                if (window.scrollY > 80) {
+                    navbar.classList.add('scrolled');
+                } else {
+                    navbar.classList.remove('scrolled');
+                }
+                scrollTicking = false;
+            });
         }
-    });
+    }, { passive: true });
 
     // Close mobile menu when clicking a link
     document.querySelectorAll('.nav-link').forEach(function(link) {
@@ -866,11 +873,12 @@ function initScrollAnimations() {
         entries.forEach(function(entry) {
             if (entry.isIntersecting) {
                 entry.target.classList.add('visible');
+                observer.unobserve(entry.target);
             }
         });
     }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
 
-    document.querySelectorAll('.service-card, .wh-feature, .cert-card, .partner-card, .about-img-card, .trust-item, .video-card').forEach(function(el) {
+    document.querySelectorAll('.service-card, .wh-feature, .cert-card, .partner-card, .about-img-card, .trust-item, .video-card, .network-region, .step-card, .faq-item, .net-stat').forEach(function(el) {
         el.classList.add('fade-in');
         observer.observe(el);
     });
@@ -954,34 +962,27 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }, 3500);
 
-    // 13. Form auto-save on change
+    // 13. Form auto-save on change (debounced)
     var contactForm = document.querySelector('.contact-form');
     if (contactForm) {
+        var formSaveTimer = null;
         contactForm.addEventListener('change', function() {
-            FormDataManager.saveFormData({
-                name: contactForm.querySelector('[name="name"]')?.value || '',
-                email: contactForm.querySelector('[name="email"]')?.value || '',
-                company: contactForm.querySelector('[name="company"]')?.value || '',
-                service: contactForm.querySelector('[name="service"]')?.value || ''
-            });
+            clearTimeout(formSaveTimer);
+            formSaveTimer = setTimeout(function() {
+                FormDataManager.saveFormData({
+                    name: contactForm.querySelector('[name="name"]')?.value || '',
+                    email: contactForm.querySelector('[name="email"]')?.value || '',
+                    company: contactForm.querySelector('[name="company"]')?.value || '',
+                    service: contactForm.querySelector('[name="service"]')?.value || ''
+                });
+            }, 500);
         });
     }
 
     // 14. Apply saved theme on load
     applyStoredTheme();
 
-    // 15. Fade-in for new sections
-    var extObserver = new IntersectionObserver(function(entries) {
-        entries.forEach(function(entry) {
-            if (entry.isIntersecting) {
-                entry.target.classList.add('visible');
-            }
-        });
-    }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
-    document.querySelectorAll('.network-region, .step-card, .faq-item, .net-stat').forEach(function(el) {
-        el.classList.add('fade-in');
-        extObserver.observe(el);
-    });
+    // 15. (Merged into initScrollAnimations)
 
     // 16. Close language dropdown when clicking outside
     document.addEventListener('click', function(e) {
@@ -1080,12 +1081,21 @@ function initLiveActivityFeed() {
         feed.appendChild(createItem(seedTimes[i]));
     }
 
+    // Pause feed when tab is hidden to save CPU
+    var feedPaused = false;
+    var feedTimer = null;
+    document.addEventListener('visibilitychange', function() {
+        feedPaused = document.hidden;
+        if (!feedPaused && !feedTimer) scheduleFeed();
+    });
+
     // Add new entry every 4-9 seconds
     function addNewEntry() {
+        feedTimer = null;
+        if (feedPaused) return;
+
         var newItem = createItem(0);
-        newItem.style.opacity = '0';
-        newItem.style.transform = 'translateX(-20px)';
-        newItem.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+        newItem.style.cssText = 'opacity:0;transform:translateX(-20px);transition:opacity 0.5s ease,transform 0.5s ease;will-change:opacity,transform;';
         feed.insertBefore(newItem, feed.firstChild);
 
         // Animate in
@@ -1093,15 +1103,14 @@ function initLiveActivityFeed() {
             requestAnimationFrame(function() {
                 newItem.style.opacity = '1';
                 newItem.style.transform = 'translateX(0)';
+                // Clean will-change after animation
+                setTimeout(function() { newItem.style.willChange = 'auto'; }, 600);
             });
         });
 
         // Remove oldest if over max
         while (feed.children.length > maxItems) {
-            var last = feed.lastChild;
-            last.style.opacity = '0';
-            last.style.transition = 'opacity 0.3s ease';
-            setTimeout(function(el) { if (el.parentNode) el.parentNode.removeChild(el); }, 300, last);
+            feed.removeChild(feed.lastChild);
         }
 
         // Age existing timestamps
@@ -1115,13 +1124,17 @@ function initLiveActivityFeed() {
             }
         }
 
-        // Schedule next (random 4-9 seconds)
+        scheduleFeed();
+    }
+
+    function scheduleFeed() {
+        if (feedTimer) return;
         var next = 4000 + Math.floor(Math.random() * 5000);
-        setTimeout(addNewEntry, next);
+        feedTimer = setTimeout(addNewEntry, next);
     }
 
     // Start after first delay
-    setTimeout(addNewEntry, 4000 + Math.floor(Math.random() * 3000));
+    scheduleFeed();
 }
 
 
