@@ -1728,25 +1728,29 @@
                                 <div class="form-row">
                                     <div class="form-group">
                                         <label for="newOrigin">Origin City <span style="color:#E63946;">*</span></label>
-                                        <select id="newOrigin" required>
+                                        <select id="newOrigin" required onchange="toggleCustomCity('newOrigin','newOriginCustom')">
                                             <option value="">Select Origin</option>
                                             <option>Shanghai</option><option>Singapore</option><option>Rotterdam</option><option>Los Angeles</option>
                                             <option>Dubai</option><option>Hamburg</option><option>Tokyo</option><option>Sydney</option>
                                             <option>London</option><option>New York</option><option>Mumbai</option><option>Sao Paulo</option>
                                             <option>Hong Kong</option><option>Busan</option><option>Jeddah</option><option>Miami</option>
                                             <option>Frankfurt</option><option>Johannesburg</option><option>Lagos</option><option>Nairobi</option>
+                                            <option value="__custom__">✏️ Custom (type your own)</option>
                                         </select>
+                                        <input type="text" id="newOriginCustom" placeholder="Enter custom origin city" style="display:none;margin-top:8px;">
                                     </div>
                                     <div class="form-group">
                                         <label for="newDestination">Destination City <span style="color:#E63946;">*</span></label>
-                                        <select id="newDestination" required>
+                                        <select id="newDestination" required onchange="toggleCustomCity('newDestination','newDestinationCustom')">
                                             <option value="">Select Destination</option>
                                             <option>Shanghai</option><option>Singapore</option><option>Rotterdam</option><option>Los Angeles</option>
                                             <option>Dubai</option><option>Hamburg</option><option>Tokyo</option><option>Sydney</option>
                                             <option>London</option><option>New York</option><option>Mumbai</option><option>Sao Paulo</option>
                                             <option>Hong Kong</option><option>Busan</option><option>Jeddah</option><option>Miami</option>
                                             <option>Frankfurt</option><option>Johannesburg</option><option>Lagos</option><option>Nairobi</option>
+                                            <option value="__custom__">✏️ Custom (type your own)</option>
                                         </select>
+                                        <input type="text" id="newDestinationCustom" placeholder="Enter custom destination city" style="display:none;margin-top:8px;">
                                     </div>
                                 </div>
                                 <div class="form-row">
@@ -3172,11 +3176,32 @@
             if (el) el.addEventListener('change', calcVolWeight);
         });
 
+        // ==================== CUSTOM CITY TOGGLE ====================
+        function toggleCustomCity(selectId, inputId) {
+            var sel = document.getElementById(selectId);
+            var inp = document.getElementById(inputId);
+            if (sel.value === '__custom__') {
+                inp.style.display = 'block';
+                inp.required = true;
+                inp.focus();
+            } else {
+                inp.style.display = 'none';
+                inp.required = false;
+                inp.value = '';
+            }
+        }
+
+        function getCityValue(selectId, inputId) {
+            var sel = document.getElementById(selectId).value;
+            if (sel === '__custom__') return document.getElementById(inputId).value.trim();
+            return sel;
+        }
+
         // ==================== CREATE SHIPMENT ====================
         async function handleCreateShipment(e) {
             e.preventDefault();
-            const origin = document.getElementById('newOrigin').value;
-            const destination = document.getElementById('newDestination').value;
+            const origin = getCityValue('newOrigin', 'newOriginCustom');
+            const destination = getCityValue('newDestination', 'newDestinationCustom');
             const type = document.getElementById('newType').value;
             const weight = document.getElementById('newWeight').value;
             const eta = document.getElementById('newETA').value;
