@@ -3980,8 +3980,21 @@ body[data-theme="dark"] {
 
     .nav-menu.active { display: flex; }
 
+    /* Dark mode mobile menu */
+    [data-theme="dark"] .nav-menu {
+        background: #161b22;
+        border-top-color: rgba(255,255,255,0.08);
+    }
+
     .nav-actions {
         order: -1;
+    }
+
+    /* Touch-friendly nav links */
+    .nav-menu .nav-link {
+        min-height: 44px;
+        display: flex;
+        align-items: center;
     }
 
     .hero-title {
@@ -4008,6 +4021,12 @@ body[data-theme="dark"] {
 
     .hero-buttons {
         flex-direction: column;
+    }
+
+    /* Touch-friendly hero buttons */
+    .hero-buttons .btn {
+        min-height: 48px;
+        font-size: 0.95rem;
     }
 
     .hero-tagline {
@@ -4051,6 +4070,11 @@ body[data-theme="dark"] {
         flex-direction: column;
     }
 
+    /* Touch-friendly search button */
+    .search-group .btn {
+        min-height: 48px;
+    }
+
     .warehouse-video-wrap { aspect-ratio: 16/9; }
     .warehouse-video-overlay {
         padding: 20px;
@@ -4060,6 +4084,21 @@ body[data-theme="dark"] {
     }
 
     .tracking-map { height: 350px; }
+
+    /* Map legend wrap for small screens */
+    .map-legend {
+        flex-wrap: wrap;
+        gap: 12px;
+        font-size: 0.78rem;
+        padding: 10px 16px;
+    }
+
+    /* Map controls — icon-only labels on mobile */
+    .map-ctrl {
+        padding: 10px 12px;
+        min-height: 44px;
+        font-size: 0.75rem;
+    }
 
     .chat-window { width: 300px; }
 
@@ -4106,6 +4145,46 @@ body[data-theme="dark"] {
     .breakdown-grid { grid-template-columns: repeat(2, 1fr); }
     .ops-status-strip { gap: 12px; }
     .fleet-label { min-width: 90px; font-size: 0.72rem; }
+
+    /* Touch-friendly buttons & inputs */
+    .btn, button { min-height: 44px; }
+    .search-input-wrap input { padding: 14px 14px 14px 44px; font-size: 0.95rem; }
+    .map-ctrl span { display: none; }
+    .map-ctrl { padding: 10px; }
+    .map-legend { gap: 8px; font-size: 0.72rem; padding: 8px 12px; }
+
+    /* Tracking result compact */
+    .track-details-grid { grid-template-columns: 1fr; gap: 8px; }
+    .track-status-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+
+    /* Section padding reduction */
+    section { padding: 60px 0; }
+    .container { padding: 0 16px; }
+
+    /* Splash screen smaller */
+    .tox-logo-svg { width: 220px; height: 100px; }
+
+    /* Achievement cards 2-col */
+    .achievement-cards { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* Ultra-small screens (320px) */
+@media (max-width: 360px) {
+    .hero-title { font-size: 1.6rem; }
+    .hero-title-sub { font-size: 0.85rem; letter-spacing: 2px; }
+    .stat-number { font-size: 1.2rem; }
+    .stat-item { flex: 1 1 100%; }
+    .stat-divider { display: none; }
+    .section-title { font-size: 1.4rem; }
+    .tracking-map { height: 240px; }
+    .breakdown-grid { grid-template-columns: 1fr 1fr; }
+    .breakdown-circle { width: 50px; height: 50px; }
+    .breakdown-circle span { font-size: 0.7rem; }
+    .achievement-cards { grid-template-columns: 1fr; }
+    .chat-window { width: calc(100vw - 32px); right: 16px; }
+    .nav-container { padding: 0 12px; }
+    .tox-logo-svg { width: 180px; height: 80px; }
+    .contact-form { padding: 16px; }
 }
 
 

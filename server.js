@@ -257,6 +257,28 @@ app.get('/api/track/:shipmentId', rateLimit(60000, 20), (req, res) => {
     });
 });
 
+// Get active shipments for public map view (rate limited, minimal data)
+app.get('/api/map/shipments', rateLimit(60000, 10), (req, res) => {
+    try {
+        const shipments = JSON.parse(fs.readFileSync(shipmentsFile, 'utf8'));
+        const active = shipments.filter(s => 
+            s.status && !['Delivered', 'Cancelled'].includes(s.status)
+        );
+        // Return only map-safe fields (no client data, no addresses)
+        res.json(active.slice(0, 50).map(s => ({
+            id: s.id,
+            origin: s.origin || '',
+            destination: s.destination || '',
+            status: s.status || '',
+            type: s.type || '',
+            progress: s.progress || 0,
+            current_location: s.current_location || ''
+        })));
+    } catch(e) {
+        res.json([]);
+    }
+});
+
 // ==================== ADMIN API ====================
 
 // Admin authentication with brute force protection

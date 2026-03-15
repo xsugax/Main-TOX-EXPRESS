@@ -384,79 +384,117 @@ function setMapView(type) {
 function addDemoShipmentRoutes() {
     if (!trackingMap) return;
 
-    // Shipment route data
-    var routes = [
-        {
-            id: 'TOX-2026-001',
-            origin: { lat: 31.23, lng: 121.47, name: 'Shanghai' },
-            destination: { lat: 51.92, lng: 4.48, name: 'Rotterdam' },
-            current: { lat: 30.0, lng: 32.5, name: 'Suez Canal Area' },
-            status: 'In Transit',
-            color: '#E63946'
-        },
-        {
-            id: 'TOX-2026-002',
-            origin: { lat: 33.94, lng: -118.41, name: 'Los Angeles' },
-            destination: { lat: 1.35, lng: 103.82, name: 'Singapore' },
-            current: { lat: 21.3, lng: -157.8, name: 'Pacific Ocean (Hawaii)' },
-            status: 'In Transit',
-            color: '#1D3557'
-        },
-        {
-            id: 'TOX-2026-003',
-            origin: { lat: 50.04, lng: 8.56, name: 'Frankfurt' },
-            destination: { lat: 35.68, lng: 139.69, name: 'Tokyo' },
-            current: { lat: 42.0, lng: 75.0, name: 'Central Asia Airspace' },
-            status: 'In Flight',
-            color: '#E8C84A'
-        }
+    // City coordinate lookup for geocoding origin/destination names
+    var cityCoords = {
+        'shanghai': { lat: 31.23, lng: 121.47 }, 'singapore': { lat: 1.35, lng: 103.82 },
+        'rotterdam': { lat: 51.92, lng: 4.48 }, 'los angeles': { lat: 33.94, lng: -118.41 },
+        'dubai': { lat: 25.28, lng: 55.30 }, 'hamburg': { lat: 53.55, lng: 9.99 },
+        'tokyo': { lat: 35.68, lng: 139.69 }, 'sydney': { lat: -33.87, lng: 151.21 },
+        'london': { lat: 51.51, lng: -0.13 }, 'new york': { lat: 40.71, lng: -74.01 },
+        'mumbai': { lat: 19.08, lng: 72.88 }, 'sao paulo': { lat: -23.55, lng: -46.63 },
+        'hong kong': { lat: 22.32, lng: 114.17 }, 'busan': { lat: 35.18, lng: 129.08 },
+        'jeddah': { lat: 21.49, lng: 39.19 }, 'miami': { lat: 25.76, lng: -80.19 },
+        'frankfurt': { lat: 50.04, lng: 8.56 }, 'johannesburg': { lat: -26.20, lng: 28.05 },
+        'lagos': { lat: 6.52, lng: 3.38 }, 'nairobi': { lat: -1.29, lng: 36.82 },
+        'bangkok': { lat: 13.76, lng: 100.50 }, 'istanbul': { lat: 41.01, lng: 28.98 },
+        'cape town': { lat: -33.93, lng: 18.42 }, 'toronto': { lat: 43.65, lng: -79.38 },
+        'vancouver': { lat: 49.28, lng: -123.12 }, 'melbourne': { lat: -37.81, lng: 144.96 },
+        'lima': { lat: -12.05, lng: -77.03 }, 'karachi': { lat: 24.86, lng: 67.01 }
+    };
+
+    var routeColors = ['#E63946', '#1D3557', '#E8C84A', '#00b4d8', '#8b5cf6', '#22c55e', '#f97316'];
+
+    function getCityCoords(name) {
+        if (!name) return null;
+        var key = name.toLowerCase().trim();
+        return cityCoords[key] || null;
+    }
+
+    function midpoint(a, b, progress) {
+        var frac = Math.min(Math.max((progress || 50) / 100, 0.05), 0.95);
+        return { lat: a.lat + (b.lat - a.lat) * frac, lng: a.lng + (b.lng - a.lng) * frac };
+    }
+
+    function plotRoutes(routes) {
+        // Clear existing markers
+        shipmentMarkers.forEach(function(m) { trackingMap.removeLayer(m); });
+        shipmentMarkers = [];
+
+        routes.forEach(function(route, i) {
+            var originCoords = getCityCoords(route.origin);
+            var destCoords = getCityCoords(route.destination);
+            if (!originCoords || !destCoords) return;
+
+            var color = routeColors[i % routeColors.length];
+            var current = midpoint(originCoords, destCoords, route.progress);
+
+            // Origin marker (green)
+            var m1 = L.circleMarker([originCoords.lat, originCoords.lng], {
+                radius: 8, fillColor: '#28a745', color: '#1a7a31', weight: 2, fillOpacity: 0.9
+            }).addTo(trackingMap).bindPopup(
+                '<strong>Origin:</strong> ' + route.origin + '<br>' +
+                '<strong>Shipment:</strong> ' + route.id
+            );
+            shipmentMarkers.push(m1);
+
+            // Destination marker (gold)
+            var m2 = L.circleMarker([destCoords.lat, destCoords.lng], {
+                radius: 8, fillColor: '#E8C84A', color: '#c79100', weight: 2, fillOpacity: 0.9
+            }).addTo(trackingMap).bindPopup(
+                '<strong>Destination:</strong> ' + route.destination + '<br>' +
+                '<strong>Shipment:</strong> ' + route.id
+            );
+            shipmentMarkers.push(m2);
+
+            // Current position marker (colored, pulsing)
+            var m3 = L.circleMarker([current.lat, current.lng], {
+                radius: 10, fillColor: color, color: '#fff', weight: 3, fillOpacity: 1
+            }).addTo(trackingMap).bindPopup(
+                '<strong>Shipment:</strong> ' + route.id + '<br>' +
+                '<strong>Status:</strong> ' + route.status + '<br>' +
+                '<strong>Type:</strong> ' + (route.type || '') + '<br>' +
+                '<strong>Progress:</strong> ' + (route.progress || 0) + '%' +
+                (route.current_location ? '<br><strong>Location:</strong> ' + route.current_location : '')
+            );
+            shipmentMarkers.push(m3);
+
+            // Route line (dashed — full route)
+            var line1 = L.polyline([
+                [originCoords.lat, originCoords.lng],
+                [current.lat, current.lng],
+                [destCoords.lat, destCoords.lng]
+            ], { color: color, weight: 2, opacity: 0.6, dashArray: '8, 8' }).addTo(trackingMap);
+            shipmentMarkers.push(line1);
+
+            // Traveled portion (solid)
+            var line2 = L.polyline([
+                [originCoords.lat, originCoords.lng],
+                [current.lat, current.lng]
+            ], { color: color, weight: 3, opacity: 0.9 }).addTo(trackingMap);
+            shipmentMarkers.push(line2);
+        });
+    }
+
+    // Demo fallback routes (shown when no real shipments exist)
+    var demoRoutes = [
+        { id: 'TOX-2026-001', origin: 'Shanghai', destination: 'Rotterdam', status: 'In Transit', type: 'Ocean Freight', progress: 65, current_location: 'Suez Canal Area' },
+        { id: 'TOX-2026-002', origin: 'Los Angeles', destination: 'Singapore', status: 'In Transit', type: 'Air Cargo', progress: 45, current_location: 'Pacific Ocean' },
+        { id: 'TOX-2026-003', origin: 'Frankfurt', destination: 'Tokyo', status: 'In Flight', type: 'Air Cargo', progress: 72, current_location: 'Central Asia Airspace' }
     ];
 
-    routes.forEach(function(route) {
-        // Origin marker (green)
-        L.circleMarker([route.origin.lat, route.origin.lng], {
-            radius: 8, fillColor: '#28a745', color: '#1a7a31', weight: 2, fillOpacity: 0.9
-        }).addTo(trackingMap).bindPopup(
-            '<strong>Origin:</strong> ' + route.origin.name + '<br>' +
-            '<strong>Shipment:</strong> ' + route.id
-        );
-
-        // Destination marker (gold)
-        L.circleMarker([route.destination.lat, route.destination.lng], {
-            radius: 8, fillColor: '#E8C84A', color: '#c79100', weight: 2, fillOpacity: 0.9
-        }).addTo(trackingMap).bindPopup(
-            '<strong>Destination:</strong> ' + route.destination.name + '<br>' +
-            '<strong>Shipment:</strong> ' + route.id
-        );
-
-        // Current position marker (red, pulsing)
-        var currentMarker = L.circleMarker([route.current.lat, route.current.lng], {
-            radius: 10, fillColor: route.color, color: '#fff', weight: 3, fillOpacity: 1
-        }).addTo(trackingMap).bindPopup(
-            '<strong>Shipment:</strong> ' + route.id + '<br>' +
-            '<strong>Status:</strong> ' + route.status + '<br>' +
-            '<strong>Location:</strong> ' + route.current.name
-        );
-
-        // Route line
-        var routePoints = [
-            [route.origin.lat, route.origin.lng],
-            [route.current.lat, route.current.lng],
-            [route.destination.lat, route.destination.lng]
-        ];
-
-        L.polyline(routePoints, {
-            color: route.color, weight: 2, opacity: 0.6, dashArray: '8, 8'
-        }).addTo(trackingMap);
-
-        // Traveled portion (solid)
-        L.polyline([
-            [route.origin.lat, route.origin.lng],
-            [route.current.lat, route.current.lng]
-        ], {
-            color: route.color, weight: 3, opacity: 0.9
-        }).addTo(trackingMap);
-    });
+    // Try to fetch real active shipments from server
+    fetch('/api/map/shipments')
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            if (data && data.length > 0) {
+                plotRoutes(data);
+            } else {
+                plotRoutes(demoRoutes);
+            }
+        })
+        .catch(function() {
+            plotRoutes(demoRoutes);
+        });
 }
 
 
