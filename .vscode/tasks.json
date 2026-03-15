@@ -1,0 +1,25 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Git commit and push",
+			"type": "shell",
+			"command": "cd \"c:\\Users\\MY PC\\Desktop\\TRANSPORT WORLD\" && git add -A && git commit -m \"Fix tracking ID generation, save full shipment data, add quick doc/print buttons\" && git push origin main"
+		},
+		{
+			"label": "Git commit and push",
+			"type": "shell",
+			"command": "git add -A && git commit -m \"Fix tracking ID generation, save full shipment data, add quick doc/print buttons - Fixed server regex rejecting new TOX-SEA-SHRO format tracking IDs - Server now saves all shipment data (client, cargo, dimensions, delivery address) - Added tracking ID success modal with Copy/Print/Generate Doc buttons - Added quick Generate Doc and Print Label buttons per shipment row - Proper error handling when server rejects shipment creation\" && git push origin main"
+		},
+		{
+			"label": "git-commit-push",
+			"type": "shell",
+			"command": "git add -A && git commit -m \"Fix tracking ID generation, save full shipment data, add quick doc/print buttons\" && git push origin main"
+		},
+		{
+			"label": "Git Commit Push",
+			"type": "shell",
+			"command": "git add -A && git commit -m \"Fix tracking ID generation and add quick doc/print buttons\" && git push origin main"
+		}
+	]
+}

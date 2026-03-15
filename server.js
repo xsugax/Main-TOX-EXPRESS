@@ -405,9 +405,9 @@ app.post('/api/admin/shipments', verifyAdminToken, (req, res) => {
     if (!origin || !destination || !eta) {
         return res.status(400).json({ error: 'Origin, destination and ETA are required' });
     }
-    // Validate ID format if provided
+    // Validate ID format if provided (supports both old TOX-2026-123456 and new TOX-SEA-SHRO-260315-849271-K7)
     var id = body.id;
-    if (id && !/^TOX-\d{4}-\d{3,6}$/.test(id)) {
+    if (id && !/^TOX-[A-Z0-9-]{5,40}$/.test(id)) {
         return res.status(400).json({ error: 'Invalid shipment ID format' });
     }
     const shipments = JSON.parse(fs.readFileSync(shipmentsFile, 'utf8'));
@@ -419,6 +419,40 @@ app.post('/api/admin/shipments', verifyAdminToken, (req, res) => {
         eta: sanitize(eta), description: sanitize(description || ''),
         createdAt: new Date().toISOString()
     };
+    // Preserve full shipment data (client, cargo, dimensions, delivery address, etc.)
+    if (body.deliveryAddress) newShipment.deliveryAddress = sanitize(body.deliveryAddress);
+    if (body.priority) newShipment.priority = sanitize(body.priority);
+    if (body.incoterms) newShipment.incoterms = sanitize(body.incoterms);
+    if (body.pieces) newShipment.pieces = parseInt(body.pieces) || 1;
+    if (body.packaging) newShipment.packaging = sanitize(body.packaging);
+    if (body.pickupDate) newShipment.pickupDate = sanitize(body.pickupDate);
+    if (body.handling) newShipment.handling = sanitize(body.handling);
+    if (body.volumetricWeight) newShipment.volumetricWeight = parseFloat(body.volumetricWeight) || 0;
+    if (body.chargeableWeight) newShipment.chargeableWeight = parseFloat(body.chargeableWeight) || 0;
+    if (body.client && typeof body.client === 'object') {
+        newShipment.client = {
+            name: sanitize(body.client.name || ''),
+            email: sanitize(body.client.email || ''),
+            phone: sanitize(body.client.phone || ''),
+            company: sanitize(body.client.company || '')
+        };
+    }
+    if (body.dimensions && typeof body.dimensions === 'object') {
+        newShipment.dimensions = {
+            length: parseFloat(body.dimensions.length) || 0,
+            width: parseFloat(body.dimensions.width) || 0,
+            height: parseFloat(body.dimensions.height) || 0
+        };
+    }
+    if (body.cargo && typeof body.cargo === 'object') {
+        newShipment.cargo = {
+            description: sanitize(body.cargo.description || ''),
+            hsCode: sanitize(body.cargo.hsCode || ''),
+            declaredValue: parseFloat(body.cargo.declaredValue) || 0,
+            insurance: sanitize(body.cargo.insurance || ''),
+            flags: Array.isArray(body.cargo.flags) ? body.cargo.flags.map(f => sanitize(f)) : []
+        };
+    }
     shipments.push(newShipment);
     fs.writeFileSync(shipmentsFile, JSON.stringify(shipments, null, 2));
     logAudit('CREATE_SHIPMENT', { shipmentId: newShipment.id, origin, destination, type: newShipment.type }, req.headers['x-admin-id'] || 'admin');

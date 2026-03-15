@@ -2667,6 +2667,29 @@
     </div><!-- /admin-shell -->
 
     <!-- ==================== MODALS ==================== -->
+    <!-- Tracking ID Success Modal -->
+    <div class="modal-overlay" id="trackingIdModal">
+        <div class="modal-box" style="max-width:520px;text-align:center;">
+            <div style="margin-bottom:20px;">
+                <div style="width:64px;height:64px;border-radius:50%;background:rgba(34,197,94,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;"><i class="fas fa-check-circle" style="font-size:32px;color:#22c55e;"></i></div>
+                <h3 style="color:var(--text-primary);margin-bottom:4px;">Shipment Created!</h3>
+                <p style="color:var(--text-secondary);font-size:0.85rem;">Tracking ID generated successfully</p>
+            </div>
+            <div style="background:var(--admin-card);border:2px dashed var(--tox-gold);border-radius:12px;padding:20px;margin-bottom:16px;">
+                <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:2px;margin-bottom:8px;">Tracking Number</div>
+                <div id="generatedTrackingId" style="font-family:'Orbitron',monospace;font-size:1.2rem;font-weight:700;color:var(--tox-gold);letter-spacing:2px;word-break:break-all;"></div>
+                <div id="trackingIdRoute" style="font-size:0.82rem;color:var(--text-secondary);margin-top:8px;"></div>
+                <div id="trackingIdClient" style="font-size:0.82rem;color:var(--text-muted);margin-top:4px;"></div>
+            </div>
+            <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+                <button onclick="copyTrackingId()" style="padding:10px 20px;background:rgba(59,130,246,0.1);color:#3b82f6;border:1px solid rgba(59,130,246,0.3);border-radius:8px;cursor:pointer;font-weight:600;font-size:0.85rem;"><i class="fas fa-copy"></i> Copy ID</button>
+                <button onclick="quickPrintLabel(document.getElementById('generatedTrackingId').textContent)" style="padding:10px 20px;background:rgba(34,197,94,0.1);color:#22c55e;border:1px solid rgba(34,197,94,0.3);border-radius:8px;cursor:pointer;font-weight:600;font-size:0.85rem;"><i class="fas fa-print"></i> Print Label</button>
+                <button onclick="quickGenerateDoc(document.getElementById('generatedTrackingId').textContent)" style="padding:10px 20px;background:rgba(232,200,74,0.1);color:var(--tox-gold);border:1px solid rgba(232,200,74,0.3);border-radius:8px;cursor:pointer;font-weight:600;font-size:0.85rem;"><i class="fas fa-file-alt"></i> Generate Doc</button>
+            </div>
+            <button onclick="closeModal('trackingIdModal')" style="margin-top:16px;padding:10px 32px;background:var(--admin-surface);color:var(--text-secondary);border:1px solid var(--admin-border);border-radius:8px;cursor:pointer;font-weight:600;">Close</button>
+        </div>
+    </div>
+
     <!-- Update Status Modal -->
     <div class="modal-overlay" id="modalStatus">
         <div class="modal-box">
@@ -3044,6 +3067,8 @@
                     '<td>' + safeEta + '</td>' +
                     '<td>' +
                         '<button class="action-btn" onclick="openStatusModal(\'' + safeId + '\')" title="Update Status"><i class="fas fa-exchange-alt"></i></button> ' +
+                        '<button class="action-btn" onclick="quickDocFromRow(\'' + safeId + '\')" title="Generate Document" style="color:#E8C84A;"><i class="fas fa-file-alt"></i></button> ' +
+                        '<button class="action-btn" onclick="quickPrintFromRow(\'' + safeId + '\')" title="Print Label" style="color:#22c55e;"><i class="fas fa-print"></i></button> ' +
                         '<button class="action-btn warning" onclick="holdShipment(\'' + safeId + '\')" title="Hold"><i class="fas fa-hand"></i></button> ' +
                         '<button class="action-btn success" onclick="openDeliveryModal(\'' + safeId + '\')" title="Deliver"><i class="fas fa-truck"></i></button> ' +
                         '<button class="action-btn danger" onclick="openCancelModal(\'' + safeId + '\')" title="Cancel"><i class="fas fa-times"></i></button>' +
@@ -3410,20 +3435,87 @@
             };
 
             try {
-                await fetch('/api/admin/shipments', {
+                var resp = await fetch('/api/admin/shipments', {
                     method: 'POST',
                     headers: { 'x-admin-token': adminToken, 'x-admin-id': 'admin@toxexpress.com', 'Content-Type': 'application/json' },
                     body: JSON.stringify(shipmentData)
                 });
-                toast('Shipment ' + shipmentId + ' created successfully', 'success');
+                var result = await resp.json();
+                if (!resp.ok) {
+                    toast('Server error: ' + (result.error || 'Failed to create shipment'), 'error');
+                    return;
+                }
+                toast('Shipment created successfully!', 'success');
             } catch(e) {
-                toast('Shipment ' + shipmentId + ' created (local)', 'success');
+                toast('Shipment created (offline mode)', 'success');
             }
+
+            // Show tracking ID confirmation modal
+            showTrackingIdModal(shipmentId, shipmentData);
 
             e.target.reset();
             calcVolWeight();
             switchTab('shipments');
             loadShipments();
+        }
+
+        // ==================== TRACKING ID SUCCESS MODAL ====================
+        function showTrackingIdModal(trackingId, data) {
+            var modal = document.getElementById('trackingIdModal');
+            if (!modal) return;
+            document.getElementById('generatedTrackingId').textContent = trackingId;
+            document.getElementById('trackingIdRoute').textContent = (data.origin || '') + ' → ' + (data.destination || '');
+            document.getElementById('trackingIdClient').textContent = data.client ? data.client.name : '';
+            modal.classList.add('active');
+        }
+
+        function copyTrackingId() {
+            var id = document.getElementById('generatedTrackingId').textContent;
+            navigator.clipboard.writeText(id).then(function() { toast('Tracking ID copied!', 'success'); });
+        }
+
+        function quickPrintLabel(trackingId) {
+            var ship = allShipmentsCache.find(function(s) { return s.id === trackingId; });
+            if (!ship) {
+                // Use basic info from modal
+                ship = { id: trackingId, origin: '', destination: '', type: '', client: {}, weight: 0, pieces: 1 };
+            }
+            var labelHtml = '<div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;padding:24px;border:3px solid #1D3557;">' +
+                '<div style="text-align:center;margin-bottom:16px;"><svg width="40" height="40" viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="10" width="46" height="32" rx="5" fill="#1D3557" stroke="#E8C84A" stroke-width="2"/><text x="25" y="32" text-anchor="middle" fill="#E8C84A" font-family="Arial,sans-serif" font-weight="800" font-size="16">TOX</text></svg>' +
+                '<div style="font-size:18px;font-weight:800;color:#1D3557;letter-spacing:3px;">TOX EXPRESS</div></div>' +
+                '<div style="background:#1D3557;color:white;text-align:center;padding:8px;font-weight:700;font-size:14px;letter-spacing:2px;margin-bottom:16px;">SHIPPING LABEL</div>' +
+                '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">' +
+                '<div style="padding:10px;border:1px solid #ddd;"><div style="font-size:9px;color:#888;font-weight:700;">FROM</div><div style="font-size:12px;font-weight:600;">' + escHtml(ship.origin || '') + '</div></div>' +
+                '<div style="padding:10px;border:2px solid #1D3557;background:#f0f4f8;"><div style="font-size:9px;color:#E63946;font-weight:700;">TO</div><div style="font-size:14px;font-weight:700;">' + escHtml(ship.destination || '') + '</div>' +
+                (ship.client && ship.client.name ? '<div style="font-size:11px;color:#555;">' + escHtml(ship.client.name) + '</div>' : '') +
+                (ship.deliveryAddress ? '<div style="font-size:10px;color:#777;margin-top:4px;">' + escHtml(ship.deliveryAddress) + '</div>' : '') + '</div></div>' +
+                '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;text-align:center;">' +
+                '<div style="padding:8px;border:1px solid #ddd;"><div style="font-size:9px;color:#888;">WEIGHT</div><div style="font-weight:700;">' + escHtml(String(ship.weight || 0)) + ' kg</div></div>' +
+                '<div style="padding:8px;border:1px solid #ddd;"><div style="font-size:9px;color:#888;">PIECES</div><div style="font-weight:700;">' + escHtml(String(ship.pieces || 1)) + '</div></div>' +
+                '<div style="padding:8px;border:1px solid #ddd;"><div style="font-size:9px;color:#888;">TYPE</div><div style="font-weight:700;font-size:11px;">' + escHtml(ship.type || '') + '</div></div></div>' +
+                '<div style="text-align:center;padding:16px;border:2px dashed #ccc;margin-bottom:12px;">' +
+                '<div style="font-family:monospace;font-size:22px;letter-spacing:4px;font-weight:700;color:#1D3557;">' + escHtml(trackingId) + '</div>' +
+                '<div style="margin-top:6px;font-size:8px;color:#888;letter-spacing:2px;">TRACKING NUMBER</div></div>' +
+                '<div style="text-align:center;font-size:9px;color:#888;">TOX Express &bull; www.toxexpress.org &bull; +1-800-TOX-SHIP</div></div>';
+            printHTML(labelHtml);
+        }
+
+        function quickGenerateDoc(trackingId) {
+            closeModal('trackingIdModal');
+            switchTab('documents');
+            selectedDocType = 'shipping-label';
+            document.querySelectorAll('.doc-type-card').forEach(function(c) { c.classList.remove('selected'); });
+            var card = document.getElementById('docCard-shipping-label');
+            if (card) card.classList.add('selected');
+            document.getElementById('docFormPanel').style.display = 'block';
+            document.getElementById('docFormTitle').textContent = 'Shipping Label';
+            document.getElementById('docDate').value = new Date().toISOString().slice(0, 10);
+            populateDocShipmentDropdown();
+            // Pre-select the shipment
+            setTimeout(function() {
+                var sel = document.getElementById('docShipmentId');
+                if (sel) { sel.value = trackingId; autoFillDocForm(); }
+            }, 300);
         }
 
         // ==================== UTILITIES ====================
@@ -4317,6 +4409,26 @@
         }
 
         // ==================== DOCUMENT GENERATION ====================
+        function quickDocFromRow(shipmentId) {
+            switchTab('documents');
+            selectedDocType = 'shipping-label';
+            document.querySelectorAll('.doc-type-card').forEach(function(c) { c.classList.remove('selected'); });
+            var card = document.getElementById('docCard-shipping-label');
+            if (card) card.classList.add('selected');
+            document.getElementById('docFormPanel').style.display = 'block';
+            document.getElementById('docFormTitle').textContent = 'Shipping Label';
+            document.getElementById('docDate').value = new Date().toISOString().slice(0, 10);
+            populateDocShipmentDropdown();
+            setTimeout(function() {
+                var sel = document.getElementById('docShipmentId');
+                if (sel) { sel.value = shipmentId; autoFillDocForm(); }
+            }, 300);
+        }
+
+        function quickPrintFromRow(shipmentId) {
+            quickPrintLabel(shipmentId);
+        }
+
         function selectDocType(type) {
             selectedDocType = type;
             document.querySelectorAll('.doc-type-card').forEach(function(c) { c.classList.remove('selected'); });
