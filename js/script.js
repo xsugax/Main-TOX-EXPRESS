@@ -1195,7 +1195,12 @@ function triggerGoogleTranslate(lang) {
         // Reset to original
         document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=' + domain;
         document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/';
-        location.reload();
+        // Use Google Translate API to reset instead of page reload
+        var frame = document.querySelector('.goog-te-combo');
+        if (frame) {
+            frame.value = 'en';
+            frame.dispatchEvent(new Event('change'));
+        }
         return;
     }
     document.cookie = 'googtrans=/en/' + lang + '; path=/; domain=' + domain;
@@ -1206,9 +1211,6 @@ function triggerGoogleTranslate(lang) {
     if (frame) {
         frame.value = lang;
         frame.dispatchEvent(new Event('change'));
-    } else {
-        // Reload to apply cookie-based translation
-        location.reload();
     }
 }
 
