@@ -2465,16 +2465,14 @@ img { max-width: 100%; height: auto; display: block; }
 }
 
 .partner-logo {
-    width: 64px;
-    height: 64px;
+    width: 72px;
+    height: 44px;
     margin: 0 auto 12px;
-    background: linear-gradient(135deg, rgba(29, 53, 87, 0.08), rgba(230, 57, 70, 0.08));
-    border-radius: 50%;
+    border-radius: var(--radius-sm);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--tox-navy);
-    font-size: 1.5rem;
+    overflow: hidden;
 }
 
 .partner-card h3 {
