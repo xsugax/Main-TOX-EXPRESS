@@ -966,4 +966,120 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
+
+    // 14. Apply saved theme on load
+    applyStoredTheme();
+
+    // 15. Fade-in for new sections
+    var extObserver = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+            }
+        });
+    }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+    document.querySelectorAll('.network-region, .step-card, .faq-item, .net-stat').forEach(function(el) {
+        el.classList.add('fade-in');
+        extObserver.observe(el);
+    });
+
+    // 16. Close language dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        var dd = document.getElementById('langDropdown');
+        var sel = document.getElementById('langSelector');
+        if (dd && sel && !sel.contains(e.target)) {
+            dd.classList.remove('active');
+        }
+    });
 });
+
+
+// ==========================================
+// DARK / LIGHT MODE TOGGLE
+// ==========================================
+
+function toggleTheme() {
+    var html = document.documentElement;
+    var icon = document.getElementById('themeIcon');
+    if (html.getAttribute('data-theme') === 'dark') {
+        html.removeAttribute('data-theme');
+        if (icon) { icon.className = 'fas fa-moon'; }
+        localStorage.setItem('toxTheme', 'light');
+    } else {
+        html.setAttribute('data-theme', 'dark');
+        if (icon) { icon.className = 'fas fa-sun'; }
+        localStorage.setItem('toxTheme', 'dark');
+    }
+}
+
+function applyStoredTheme() {
+    var saved = localStorage.getItem('toxTheme');
+    var icon = document.getElementById('themeIcon');
+    if (saved === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        if (icon) icon.className = 'fas fa-sun';
+    }
+}
+
+
+// ==========================================
+// LANGUAGE SELECTOR (Google Translate)
+// ==========================================
+
+function toggleLangMenu() {
+    var dd = document.getElementById('langDropdown');
+    if (dd) dd.classList.toggle('active');
+}
+
+function switchLang(langCode, label) {
+    // Update button label
+    var el = document.getElementById('currentLang');
+    if (el) el.textContent = label;
+
+    // Close dropdown
+    var dd = document.getElementById('langDropdown');
+    if (dd) dd.classList.remove('active');
+
+    // Trigger Google Translate
+    triggerGoogleTranslate(langCode);
+}
+
+function triggerGoogleTranslate(lang) {
+    // Set the Google Translate cookie
+    var domain = location.hostname;
+    if (lang === 'en') {
+        // Reset to original
+        document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=' + domain;
+        document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/';
+        location.reload();
+        return;
+    }
+    document.cookie = 'googtrans=/en/' + lang + '; path=/; domain=' + domain;
+    document.cookie = 'googtrans=/en/' + lang + '; path=/';
+
+    // If the translate element exists, use its API
+    var frame = document.querySelector('.goog-te-combo');
+    if (frame) {
+        frame.value = lang;
+        frame.dispatchEvent(new Event('change'));
+    } else {
+        // Reload to apply cookie-based translation
+        location.reload();
+    }
+}
+
+// Callback for Google Translate script
+function googleTranslateInit() {
+    new google.translate.TranslateElement({
+        pageLanguage: 'en',
+        autoDisplay: false,
+        layout: google.translate.TranslateElement.InlineLayout.SIMPLE
+    }, 'google_translate_element');
+}
+
+// Hide Google Translate top bar after it loads
+(function hideGoogleTranslateBar() {
+    var style = document.createElement('style');
+    style.textContent = '.goog-te-banner-frame, .skiptranslate { display: none !important; } body { top: 0 !important; }';
+    document.head.appendChild(style);
+})();

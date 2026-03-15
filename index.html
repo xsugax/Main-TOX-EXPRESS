@@ -88,6 +88,36 @@
                 <li><a href="#tracking" class="nav-link">Tracking</a></li>
                 <li><a href="#contact" class="nav-link">Contact</a></li>
             </ul>
+            <div class="nav-actions">
+                <div class="language-selector" id="langSelector">
+                    <button class="lang-toggle" onclick="toggleLangMenu()" aria-label="Change language">
+                        <i class="fas fa-globe"></i> <span id="currentLang">EN</span> <i class="fas fa-chevron-down" style="font-size:0.6rem;"></i>
+                    </button>
+                    <div class="lang-dropdown" id="langDropdown">
+                        <button onclick="switchLang('en','EN')"><span class="lang-flag">🇬🇧</span> English</button>
+                        <button onclick="switchLang('fr','FR')"><span class="lang-flag">🇫🇷</span> Français</button>
+                        <button onclick="switchLang('es','ES')"><span class="lang-flag">🇪🇸</span> Español</button>
+                        <button onclick="switchLang('de','DE')"><span class="lang-flag">🇩🇪</span> Deutsch</button>
+                        <button onclick="switchLang('pt','PT')"><span class="lang-flag">🇧🇷</span> Português</button>
+                        <button onclick="switchLang('zh-CN','中文')"><span class="lang-flag">🇨🇳</span> 中文</button>
+                        <button onclick="switchLang('ja','日本')"><span class="lang-flag">🇯🇵</span> 日本語</button>
+                        <button onclick="switchLang('ko','한국')"><span class="lang-flag">🇰🇷</span> 한국어</button>
+                        <button onclick="switchLang('ar','عربي')"><span class="lang-flag">🇸🇦</span> العربية</button>
+                        <button onclick="switchLang('hi','हिंदी')"><span class="lang-flag">🇮🇳</span> हिंदी</button>
+                        <button onclick="switchLang('ru','РУ')"><span class="lang-flag">🇷🇺</span> Русский</button>
+                        <button onclick="switchLang('tr','TR')"><span class="lang-flag">🇹🇷</span> Türkçe</button>
+                        <button onclick="switchLang('sw','SW')"><span class="lang-flag">🇰🇪</span> Kiswahili</button>
+                        <button onclick="switchLang('it','IT')"><span class="lang-flag">🇮🇹</span> Italiano</button>
+                        <button onclick="switchLang('nl','NL')"><span class="lang-flag">🇳🇱</span> Nederlands</button>
+                        <button onclick="switchLang('th','ไทย')"><span class="lang-flag">🇹🇭</span> ไทย</button>
+                        <button onclick="switchLang('vi','VI')"><span class="lang-flag">🇻🇳</span> Tiếng Việt</button>
+                        <button onclick="switchLang('ms','MS')"><span class="lang-flag">🇲🇾</span> Bahasa Melayu</button>
+                    </div>
+                </div>
+                <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" aria-label="Toggle light/dark mode">
+                    <i class="fas fa-moon" id="themeIcon"></i>
+                </button>
+            </div>
             <button class="nav-toggle" onclick="document.getElementById('navMenu').classList.toggle('active')" aria-label="Toggle navigation">
                 <i class="fas fa-bars"></i>
             </button>
@@ -803,6 +833,131 @@
         </div>
     </section>
 
+    <!-- GLOBAL NETWORK -->
+    <section class="global-network" id="network">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title"><i class="fas fa-earth-americas"></i> Our Global Reach</h2>
+                <p class="section-subtitle">Strategically positioned hubs across 6 continents for seamless cargo movement</p>
+            </div>
+            <div class="network-grid">
+                <div class="network-region">
+                    <div class="region-icon"><i class="fas fa-landmark"></i></div>
+                    <h4>Asia Pacific</h4>
+                    <p class="region-hub"><i class="fas fa-map-pin"></i> Shanghai &bull; Singapore &bull; Tokyo &bull; Sydney &bull; Hong Kong &bull; Busan</p>
+                    <div class="region-stat"><strong>45%</strong> of global volume</div>
+                </div>
+                <div class="network-region">
+                    <div class="region-icon"><i class="fas fa-tower-observation"></i></div>
+                    <h4>Europe</h4>
+                    <p class="region-hub"><i class="fas fa-map-pin"></i> Rotterdam &bull; Hamburg &bull; London &bull; Frankfurt &bull; Antwerp</p>
+                    <div class="region-stat"><strong>28%</strong> of global volume</div>
+                </div>
+                <div class="network-region">
+                    <div class="region-icon"><i class="fas fa-flag-usa"></i></div>
+                    <h4>Americas</h4>
+                    <p class="region-hub"><i class="fas fa-map-pin"></i> New York &bull; Los Angeles &bull; Miami &bull; São Paulo &bull; Mexico City</p>
+                    <div class="region-stat"><strong>18%</strong> of global volume</div>
+                </div>
+                <div class="network-region">
+                    <div class="region-icon"><i class="fas fa-mosque"></i></div>
+                    <h4>Middle East & Africa</h4>
+                    <p class="region-hub"><i class="fas fa-map-pin"></i> Dubai &bull; Jeddah &bull; Johannesburg &bull; Lagos &bull; Nairobi</p>
+                    <div class="region-stat"><strong>9%</strong> of global volume</div>
+                </div>
+            </div>
+            <div class="network-stats-bar">
+                <div class="net-stat"><i class="fas fa-warehouse"></i><strong>120+</strong><span>Warehouses</span></div>
+                <div class="net-stat"><i class="fas fa-ship"></i><strong>3,500+</strong><span>Routes</span></div>
+                <div class="net-stat"><i class="fas fa-users-between-lines"></i><strong>8,000+</strong><span>Employees</span></div>
+                <div class="net-stat"><i class="fas fa-handshake"></i><strong>50+</strong><span>Carrier Partners</span></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section class="how-it-works">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title"><i class="fas fa-list-ol"></i> How It Works</h2>
+                <p class="section-subtitle">Ship with TOX Express in 4 simple steps</p>
+            </div>
+            <div class="steps-grid">
+                <div class="step-card">
+                    <div class="step-number">01</div>
+                    <div class="step-icon"><i class="fas fa-file-signature"></i></div>
+                    <h4>Request a Quote</h4>
+                    <p>Use our instant calculator or contact our team. Get transparent pricing with no hidden fees — in seconds.</p>
+                </div>
+                <div class="step-connector"><i class="fas fa-arrow-right"></i></div>
+                <div class="step-card">
+                    <div class="step-number">02</div>
+                    <div class="step-icon"><i class="fas fa-box-open"></i></div>
+                    <h4>We Collect & Pack</h4>
+                    <p>Our team picks up your cargo, professionally packages it, and handles all documentation and customs paperwork.</p>
+                </div>
+                <div class="step-connector"><i class="fas fa-arrow-right"></i></div>
+                <div class="step-card">
+                    <div class="step-number">03</div>
+                    <div class="step-icon"><i class="fas fa-satellite-dish"></i></div>
+                    <h4>Track in Real-Time</h4>
+                    <p>Monitor your shipment 24/7 on our satellite tracking platform. Get instant alerts at every milestone.</p>
+                </div>
+                <div class="step-connector"><i class="fas fa-arrow-right"></i></div>
+                <div class="step-card">
+                    <div class="step-number">04</div>
+                    <div class="step-icon"><i class="fas fa-check-double"></i></div>
+                    <h4>Delivered & Confirmed</h4>
+                    <p>Safe delivery with proof of receipt. Instant confirmation email with signed delivery documentation.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ SECTION -->
+    <section class="faq-section" id="faq">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title"><i class="fas fa-circle-question"></i> Frequently Asked Questions</h2>
+                <p class="section-subtitle">Quick answers to common logistics queries</p>
+            </div>
+            <div class="faq-grid">
+                <div class="faq-item" onclick="this.classList.toggle('open')">
+                    <div class="faq-question"><span>How do I track my shipment?</span><i class="fas fa-chevron-down"></i></div>
+                    <div class="faq-answer"><p>Use your tracking ID (format: TOX-YYYY-XXXXXX) in our <a href="#tracking">Satellite Tracking</a> section. You'll see real-time location on a live map, full timeline history, and current ETA. Tracking updates are available 24/7.</p></div>
+                </div>
+                <div class="faq-item" onclick="this.classList.toggle('open')">
+                    <div class="faq-question"><span>What countries do you ship to?</span><i class="fas fa-chevron-down"></i></div>
+                    <div class="faq-answer"><p>TOX Express operates across 190+ countries on 6 continents. Our network of ocean freight, air cargo, and ground transport covers virtually every destination worldwide, including remote and landlocked regions.</p></div>
+                </div>
+                <div class="faq-item" onclick="this.classList.toggle('open')">
+                    <div class="faq-question"><span>How long does international shipping take?</span><i class="fas fa-chevron-down"></i></div>
+                    <div class="faq-answer"><p>Air Cargo: 1-5 days. Ocean Freight: 15-45 days. Express: same-day to 3 days. Ground Transport: varies by region. Use our <a href="#calculator">Cost Calculator</a> for exact estimates including customs clearance time.</p></div>
+                </div>
+                <div class="faq-item" onclick="this.classList.toggle('open')">
+                    <div class="faq-question"><span>Do you handle customs clearance?</span><i class="fas fa-chevron-down"></i></div>
+                    <div class="faq-answer"><p>Yes — we provide full customs brokerage services. Our licensed agents handle all documentation, duties, tariffs, and regulatory compliance so your cargo clears smoothly without delays.</p></div>
+                </div>
+                <div class="faq-item" onclick="this.classList.toggle('open')">
+                    <div class="faq-question"><span>Is my cargo insured during transit?</span><i class="fas fa-chevron-down"></i></div>
+                    <div class="faq-answer"><p>We offer multiple insurance tiers: Basic (up to $10,000), Standard (up to $50,000), and Premium (full declared value). Coverage includes damage, loss, theft, and natural disaster during transit.</p></div>
+                </div>
+                <div class="faq-item" onclick="this.classList.toggle('open')">
+                    <div class="faq-question"><span>Can you ship hazardous or oversized goods?</span><i class="fas fa-chevron-down"></i></div>
+                    <div class="faq-answer"><p>Yes. TOX Express is IATA DGR certified for hazardous materials and equipped for oversized/project cargo. We handle chemicals, lithium batteries, heavy machinery, and more — with full safety documentation.</p></div>
+                </div>
+                <div class="faq-item" onclick="this.classList.toggle('open')">
+                    <div class="faq-question"><span>How do I get a shipping quote?</span><i class="fas fa-chevron-down"></i></div>
+                    <div class="faq-answer"><p>Use our <a href="#calculator">instant Cost Calculator</a> on this page for immediate estimates. For custom quotes on large volumes or special cargo, contact our team via the <a href="#contact">contact form</a> or email us directly.</p></div>
+                </div>
+                <div class="faq-item" onclick="this.classList.toggle('open')">
+                    <div class="faq-question"><span>What payment methods do you accept?</span><i class="fas fa-chevron-down"></i></div>
+                    <div class="faq-answer"><p>We accept bank wire transfers, credit/debit cards (Visa, Mastercard, Amex), PayPal, and corporate accounts with NET-30/60 terms for verified enterprise clients.</p></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- CONTACT SECTION -->
     <section class="contact-section" id="contact">
         <div class="container">
@@ -937,8 +1092,12 @@
         </div>
     </div>
 
+    <!-- Hidden Google Translate element -->
+    <div id="google_translate_element" style="display:none;"></div>
+
     <!-- SCRIPTS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script type="text/javascript" src="https://translate.google.com/translate_a/element.js?cb=googleTranslateInit"></script>
     <script src="js/script.js"></script>
 </body>
 </html>
