@@ -12,14 +12,31 @@ let emailTransporter = null;
 let emailReady = false;
 
 if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
-    emailTransporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASSWORD
-        },
-        tls: { rejectUnauthorized: true }
-    });
+    var smtpConfig;
+    if (process.env.EMAIL_HOST) {
+        // Custom SMTP provider (Brevo, Mailgun, SendGrid, etc.)
+        smtpConfig = {
+            host: process.env.EMAIL_HOST,
+            port: parseInt(process.env.EMAIL_PORT) || 587,
+            secure: process.env.EMAIL_SECURE === 'true',
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASSWORD
+            },
+            tls: { rejectUnauthorized: true }
+        };
+    } else {
+        // Default: Gmail
+        smtpConfig = {
+            service: 'gmail',
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASSWORD
+            },
+            tls: { rejectUnauthorized: true }
+        };
+    }
+    emailTransporter = nodemailer.createTransport(smtpConfig);
     emailTransporter.verify(function(err) {
         if (err) {
             console.log('  ⚠️  Email transporter verification failed:', err.message);
