@@ -52,7 +52,7 @@ app.use((req, res, next) => {
         "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://translate.google.com https://translate.googleapis.com https://cdn.jsdelivr.net; " +
         "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com https://translate.googleapis.com; " +
         "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; " +
-        "img-src 'self' data: https://images.pexels.com https://*.tile.openstreetmap.org https://server.arcgisonline.com https://*.tile.opentopomap.org https://translate.google.com https://www.google.com https://translate.googleapis.com; " +
+        "img-src 'self' data: https://images.pexels.com https://logo.clearbit.com https://*.tile.openstreetmap.org https://server.arcgisonline.com https://*.tile.opentopomap.org https://translate.google.com https://www.google.com https://translate.googleapis.com; " +
         "media-src 'self' https://videos.pexels.com; " +
         "connect-src 'self' https://translate.googleapis.com; " +
         "frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self';"
