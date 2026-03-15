@@ -581,36 +581,179 @@
     <section class="live-ops" id="operations">
         <div class="container">
             <div class="section-header">
-                <h2 class="section-title">Live Operations Dashboard</h2>
+                <h2 class="section-title"><i class="fas fa-signal" style="color:var(--tox-red);"></i> Live Operations Dashboard</h2>
                 <p class="section-subtitle">Real-time visibility into our global logistics network</p>
             </div>
-            <div class="ops-dashboard">
-                <div class="ops-metrics">
-                    <div class="metric-card">
-                        <div class="metric-icon"><i class="fas fa-boxes-stacked"></i></div>
-                        <div class="metric-data">
-                            <span class="metric-number" id="active-shipments">1,247</span>
-                            <span class="metric-label">Active Shipments</span>
-                        </div>
+
+            <!-- Top Metrics Row -->
+            <div class="ops-metrics">
+                <div class="metric-card">
+                    <div class="metric-icon"><i class="fas fa-boxes-stacked"></i></div>
+                    <div class="metric-data">
+                        <span class="metric-number" id="active-shipments">1,247</span>
+                        <span class="metric-label">Active Shipments</span>
                     </div>
-                    <div class="metric-card">
-                        <div class="metric-icon"><i class="fas fa-globe"></i></div>
-                        <div class="metric-data">
-                            <span class="metric-number" id="countries-served">156</span>
-                            <span class="metric-label">Countries Served</span>
-                        </div>
+                    <span class="metric-trend up"><i class="fas fa-arrow-up"></i> 12%</span>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-icon icon-blue"><i class="fas fa-globe"></i></div>
+                    <div class="metric-data">
+                        <span class="metric-number" id="countries-served">156</span>
+                        <span class="metric-label">Countries Served</span>
                     </div>
-                    <div class="metric-card">
-                        <div class="metric-icon"><i class="fas fa-check-circle"></i></div>
-                        <div class="metric-data">
-                            <span class="metric-number" id="on-time-rate">99.8%</span>
-                            <span class="metric-label">On-Time Delivery</span>
+                    <span class="metric-trend up"><i class="fas fa-arrow-up"></i> 4</span>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-icon icon-green"><i class="fas fa-check-circle"></i></div>
+                    <div class="metric-data">
+                        <span class="metric-number" id="on-time-rate">99.8%</span>
+                        <span class="metric-label">On-Time Delivery</span>
+                    </div>
+                    <span class="metric-trend up"><i class="fas fa-arrow-up"></i> 0.3%</span>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-icon icon-gold"><i class="fas fa-truck-moving"></i></div>
+                    <div class="metric-data">
+                        <span class="metric-number" id="daily-volume">3,842</span>
+                        <span class="metric-label">Daily Volume</span>
+                    </div>
+                    <span class="metric-trend up"><i class="fas fa-arrow-up"></i> 8%</span>
+                </div>
+            </div>
+
+            <!-- Dashboard Body: Activity Feed + Status Panels -->
+            <div class="ops-body">
+                <!-- Live Activity Feed -->
+                <div class="ops-activity">
+                    <div class="ops-panel-header">
+                        <h4><i class="fas fa-bolt"></i> Live Activity Feed</h4>
+                        <span class="ops-live-dot"><span class="pulse-dot"></span> LIVE</span>
+                    </div>
+                    <div class="activity-feed" id="activityFeed">
+                        <div class="activity-item">
+                            <div class="activity-dot dot-green"></div>
+                            <div class="activity-content">
+                                <p><strong>TOX-2026-004821</strong> delivered in <strong>Rotterdam, NL</strong></p>
+                                <span class="activity-time">2 min ago</span>
+                            </div>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-dot dot-blue"></div>
+                            <div class="activity-content">
+                                <p><strong>TOX-2026-004819</strong> cleared customs in <strong>Dubai, UAE</strong></p>
+                                <span class="activity-time">5 min ago</span>
+                            </div>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-dot dot-orange"></div>
+                            <div class="activity-content">
+                                <p><strong>TOX-2026-004817</strong> departed <strong>Shanghai Port</strong> via ocean</p>
+                                <span class="activity-time">8 min ago</span>
+                            </div>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-dot dot-green"></div>
+                            <div class="activity-content">
+                                <p><strong>TOX-2026-004815</strong> picked up from <strong>São Paulo, BR</strong></p>
+                                <span class="activity-time">12 min ago</span>
+                            </div>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-dot dot-red"></div>
+                            <div class="activity-content">
+                                <p><strong>TOX-2026-004812</strong> held at customs — <strong>Lagos, NG</strong></p>
+                                <span class="activity-time">15 min ago</span>
+                            </div>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-dot dot-blue"></div>
+                            <div class="activity-content">
+                                <p><strong>TOX-2026-004810</strong> arrived at <strong>Narita Airport, JP</strong></p>
+                                <span class="activity-time">18 min ago</span>
+                            </div>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-dot dot-green"></div>
+                            <div class="activity-content">
+                                <p><strong>TOX-2026-004808</strong> delivered in <strong>London, UK</strong></p>
+                                <span class="activity-time">22 min ago</span>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="ops-map">
-                    <div id="globalMap" class="map-container"></div>
+
+                <!-- Right Panels -->
+                <div class="ops-panels">
+                    <!-- Fleet Status -->
+                    <div class="ops-panel">
+                        <div class="ops-panel-header">
+                            <h4><i class="fas fa-truck"></i> Fleet Status</h4>
+                        </div>
+                        <div class="fleet-bars">
+                            <div class="fleet-row">
+                                <span class="fleet-label"><i class="fas fa-ship"></i> Ocean Vessels</span>
+                                <div class="fleet-bar-track"><div class="fleet-bar-fill" style="width:78%;background:var(--tox-navy);"></div></div>
+                                <span class="fleet-val">78%</span>
+                            </div>
+                            <div class="fleet-row">
+                                <span class="fleet-label"><i class="fas fa-plane"></i> Air Fleet</span>
+                                <div class="fleet-bar-track"><div class="fleet-bar-fill" style="width:92%;background:var(--tox-red);"></div></div>
+                                <span class="fleet-val">92%</span>
+                            </div>
+                            <div class="fleet-row">
+                                <span class="fleet-label"><i class="fas fa-truck"></i> Ground Fleet</span>
+                                <div class="fleet-bar-track"><div class="fleet-bar-fill" style="width:85%;background:#22c55e;"></div></div>
+                                <span class="fleet-val">85%</span>
+                            </div>
+                            <div class="fleet-row">
+                                <span class="fleet-label"><i class="fas fa-warehouse"></i> Warehouses</span>
+                                <div class="fleet-bar-track"><div class="fleet-bar-fill" style="width:67%;background:var(--tox-gold);"></div></div>
+                                <span class="fleet-val">67%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Shipment Breakdown -->
+                    <div class="ops-panel">
+                        <div class="ops-panel-header">
+                            <h4><i class="fas fa-chart-pie"></i> Shipment Breakdown</h4>
+                        </div>
+                        <div class="breakdown-grid">
+                            <div class="breakdown-item">
+                                <div class="breakdown-circle" style="border-color:var(--tox-navy);">
+                                    <span>45%</span>
+                                </div>
+                                <span class="breakdown-label">Ocean</span>
+                            </div>
+                            <div class="breakdown-item">
+                                <div class="breakdown-circle" style="border-color:var(--tox-red);">
+                                    <span>30%</span>
+                                </div>
+                                <span class="breakdown-label">Air</span>
+                            </div>
+                            <div class="breakdown-item">
+                                <div class="breakdown-circle" style="border-color:#22c55e;">
+                                    <span>18%</span>
+                                </div>
+                                <span class="breakdown-label">Ground</span>
+                            </div>
+                            <div class="breakdown-item">
+                                <div class="breakdown-circle" style="border-color:var(--tox-gold);">
+                                    <span>7%</span>
+                                </div>
+                                <span class="breakdown-label">Express</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
+            </div>
+
+            <!-- Bottom Status Strip -->
+            <div class="ops-status-strip">
+                <div class="status-chip"><i class="fas fa-circle" style="color:#22c55e;font-size:0.5rem;"></i> All Systems Operational</div>
+                <div class="status-chip"><i class="fas fa-server"></i> Server Uptime: 99.99%</div>
+                <div class="status-chip"><i class="fas fa-satellite-dish"></i> Tracking Satellites: 24/24 Online</div>
+                <div class="status-chip"><i class="fas fa-shield-halved"></i> Security: Grade A+</div>
             </div>
         </div>
     </section>
