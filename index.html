@@ -1,0 +1,920 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TOX Express Delivery Services - Premium Cargo & Shipping Solutions</title>
+    <meta name="description" content="TOX Express Delivery Services - Global logistics, real-time satellite tracking, premium shipping worldwide.">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+    <!-- SPLASH SCREEN -->
+    <div class="tox-splash" id="toxSplash">
+        <div class="splash-inner">
+            <div class="splash-logo-wrap">
+                <svg class="tox-logo-svg" viewBox="0 0 400 180" xmlns="http://www.w3.org/2000/svg">
+                    <g transform="translate(30, 10)">
+                        <circle cx="35" cy="28" r="18" fill="#E8C84A" />
+                        <circle cx="29" cy="24" r="2.5" fill="#1D3557" />
+                        <circle cx="41" cy="24" r="2.5" fill="#1D3557" />
+                        <path d="M29 34 Q35 40 41 34" stroke="#1D3557" stroke-width="2" fill="none" stroke-linecap="round"/>
+                        <path d="M17 22 Q35 8 53 22" fill="#E63946" />
+                        <rect x="17" y="20" width="36" height="5" rx="2" fill="#E63946"/>
+                        <rect x="12" y="23" width="8" height="3" rx="1" fill="#C1121F"/>
+                        <rect x="22" y="46" width="26" height="36" rx="6" fill="#E63946"/>
+                        <path d="M22 52 L6 62 L6 80 L18 80 L18 66 L22 60" fill="#E8C84A" stroke="#d4b43a" stroke-width="1"/>
+                        <path d="M48 52 L64 62 L64 80 L52 80 L52 66 L48 60" fill="#E8C84A" stroke="#d4b43a" stroke-width="1"/>
+                        <rect x="2" y="68" width="66" height="46" rx="5" fill="#1D3557" stroke="#E8C84A" stroke-width="2"/>
+                        <line x1="35" y1="68" x2="35" y2="114" stroke="#E8C84A" stroke-width="1.5" opacity="0.5"/>
+                        <line x1="2" y1="91" x2="68" y2="91" stroke="#E8C84A" stroke-width="1.5" opacity="0.5"/>
+                        <text x="35" y="96" text-anchor="middle" fill="#E8C84A" font-family="Orbitron, sans-serif" font-weight="800" font-size="14">TOX</text>
+                        <rect x="24" y="82" width="10" height="32" rx="4" fill="#1D3557"/>
+                        <rect x="38" y="82" width="10" height="32" rx="4" fill="#1D3557"/>
+                        <rect x="20" y="110" width="16" height="8" rx="4" fill="#0d1b2a"/>
+                        <rect x="36" y="110" width="16" height="8" rx="4" fill="#0d1b2a"/>
+                    </g>
+                    <g transform="translate(120, 40)">
+                        <text x="0" y="45" fill="#E63946" font-family="Orbitron, sans-serif" font-weight="900" font-size="52" letter-spacing="6">TOX</text>
+                        <text x="0" y="80" fill="#E8C84A" font-family="Orbitron, sans-serif" font-weight="700" font-size="20" letter-spacing="8">EXPRESS</text>
+                        <text x="0" y="108" fill="rgba(255,255,255,0.6)" font-family="Inter, sans-serif" font-weight="500" font-size="13" letter-spacing="4">DELIVERY SERVICES</text>
+                    </g>
+                </svg>
+            </div>
+            <div class="splash-loader">
+                <div class="loader-bar">
+                    <div class="loader-fill"></div>
+                </div>
+                <span class="loader-text">Loading Experience...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- NAVIGATION -->
+    <nav class="navbar" id="mainNav">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <svg width="180" height="45" viewBox="0 0 260 55" xmlns="http://www.w3.org/2000/svg">
+                    <g transform="translate(0, 2) scale(0.38)">
+                        <circle cx="35" cy="28" r="18" fill="#E8C84A" />
+                        <circle cx="29" cy="24" r="2.5" fill="#1D3557" />
+                        <circle cx="41" cy="24" r="2.5" fill="#1D3557" />
+                        <path d="M29 34 Q35 40 41 34" stroke="#1D3557" stroke-width="2" fill="none" stroke-linecap="round"/>
+                        <path d="M17 22 Q35 8 53 22" fill="#E63946" />
+                        <rect x="17" y="20" width="36" height="5" rx="2" fill="#E63946"/>
+                        <rect x="22" y="46" width="26" height="36" rx="6" fill="#E63946"/>
+                        <path d="M22 52 L6 62 L6 80 L18 80 L18 66 L22 60" fill="#E8C84A"/>
+                        <path d="M48 52 L64 62 L64 80 L52 80 L52 66 L48 60" fill="#E8C84A"/>
+                        <rect x="2" y="68" width="66" height="46" rx="5" fill="#1D3557" stroke="#E8C84A" stroke-width="2"/>
+                        <text x="35" y="96" text-anchor="middle" fill="#E8C84A" font-family="Orbitron, sans-serif" font-weight="800" font-size="14">TOX</text>
+                        <rect x="24" y="82" width="10" height="32" rx="4" fill="#1D3557"/>
+                        <rect x="38" y="82" width="10" height="32" rx="4" fill="#1D3557"/>
+                        <rect x="20" y="110" width="16" height="8" rx="4" fill="#0d1b2a"/>
+                        <rect x="36" y="110" width="16" height="8" rx="4" fill="#0d1b2a"/>
+                    </g>
+                    <text x="38" y="26" fill="#E63946" font-family="Orbitron, sans-serif" font-weight="900" font-size="26" letter-spacing="3">TOX</text>
+                    <text x="110" y="26" fill="#1D3557" font-family="Orbitron, sans-serif" font-weight="700" font-size="14" letter-spacing="2">EXPRESS</text>
+                    <text x="38" y="44" fill="#6c757d" font-family="Inter, sans-serif" font-weight="500" font-size="9" letter-spacing="3">DELIVERY SERVICES</text>
+                </svg>
+            </div>
+            <ul class="nav-menu" id="navMenu">
+                <li><a href="#about" class="nav-link">About</a></li>
+                <li><a href="#services" class="nav-link">Services</a></li>
+                <li><a href="#warehouse" class="nav-link">Warehouse</a></li>
+                <li><a href="#calculator" class="nav-link">Calculator</a></li>
+                <li><a href="#tracking" class="nav-link">Tracking</a></li>
+                <li><a href="#contact" class="nav-link">Contact</a></li>
+            </ul>
+            <button class="nav-toggle" onclick="document.getElementById('navMenu').classList.toggle('active')" aria-label="Toggle navigation">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+    </nav>
+
+    <!-- HERO SECTION WITH VIDEO BACKGROUND -->
+    <section class="hero">
+        <div class="hero-video-wrap">
+            <video class="hero-video" autoplay muted loop playsinline>
+                <source src="https://videos.pexels.com/video-files/2800369/2800369-uhd_2560_1440_30fps.mp4" type="video/mp4">
+            </video>
+        </div>
+        <div class="hero-overlay"></div>
+        <div class="hero-content">
+            <div class="hero-text">
+                <span class="hero-badge"><i class="fas fa-bolt"></i> Fast. Reliable. Global.</span>
+                <h1 class="hero-title">TOX EXPRESS</h1>
+                <p class="hero-title-sub">DELIVERY SERVICES</p>
+                <p class="hero-description">World-class logistics powered by cutting-edge technology. Real-time satellite tracking, instant cost estimates, and guaranteed delivery across 150+ countries.</p>
+                <div class="hero-stats">
+                    <div class="stat-item">
+                        <span class="stat-number" data-target="150">0</span>
+                        <span class="stat-label">Countries</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number" data-target="50000">0</span>
+                        <span class="stat-label">Daily Shipments</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number" data-target="99">0</span>
+                        <span class="stat-label">% On-Time</span>
+                    </div>
+                </div>
+                <div class="hero-buttons">
+                    <a href="#calculator" class="btn-primary-large"><i class="fas fa-calculator"></i> Get Instant Quote</a>
+                    <a href="#tracking" class="btn-secondary-large"><i class="fas fa-satellite"></i> Track Shipment</a>
+                </div>
+            </div>
+        </div>
+        <div class="hero-scroll">
+            <div class="scroll-indicator">
+                <span>Scroll to explore</span>
+                <i class="fas fa-chevron-down"></i>
+            </div>
+        </div>
+    </section>
+
+    <!-- VIDEO SHOWCASE -->
+    <section class="video-showcase">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Our Global Operations</h2>
+                <p class="section-subtitle">Experience the power of TOX Express across air, sea, and ground</p>
+            </div>
+            <div class="video-grid">
+                <div class="video-card">
+                    <div class="video-wrapper">
+                        <video autoplay muted loop playsinline>
+                            <source src="https://videos.pexels.com/video-files/2611510/2611510-uhd_2560_1440_25fps.mp4" type="video/mp4">
+                        </video>
+                        <div class="video-label"><i class="fas fa-plane-departure"></i> Air Freight Operations</div>
+                    </div>
+                </div>
+                <div class="video-card">
+                    <div class="video-wrapper">
+                        <video autoplay muted loop playsinline>
+                            <source src="https://videos.pexels.com/video-files/4488162/4488162-uhd_2560_1440_24fps.mp4" type="video/mp4">
+                        </video>
+                        <div class="video-label"><i class="fas fa-ship"></i> Ocean Cargo Fleet</div>
+                    </div>
+                </div>
+                <div class="video-card">
+                    <div class="video-wrapper">
+                        <video autoplay muted loop playsinline>
+                            <source src="https://videos.pexels.com/video-files/4390467/4390467-uhd_2560_1440_25fps.mp4" type="video/mp4">
+                        </video>
+                        <div class="video-label"><i class="fas fa-truck-fast"></i> Express Ground Delivery</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ABOUT / COMPANY OVERVIEW -->
+    <section class="about-section" id="about">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Company Overview</h2>
+                <p class="section-subtitle">Professionals you can trust with every shipment</p>
+            </div>
+            <div class="about-images-grid">
+                <div class="about-img-card featured">
+                    <img src="https://images.pexels.com/photos/4391478/pexels-photo-4391478.jpeg?auto=compress&cs=tinysrgb&w=800" alt="Professional scanning parcels in warehouse" loading="lazy">
+                    <div class="img-overlay"><span>Parcel Processing Hub</span></div>
+                </div>
+                <div class="about-img-card">
+                    <img src="https://images.pexels.com/photos/4483610/pexels-photo-4483610.jpeg?auto=compress&cs=tinysrgb&w=600" alt="Delivery professional with packages" loading="lazy">
+                    <div class="img-overlay"><span>Expert Handlers</span></div>
+                </div>
+                <div class="about-img-card">
+                    <img src="https://images.pexels.com/photos/6169668/pexels-photo-6169668.jpeg?auto=compress&cs=tinysrgb&w=600" alt="Team loading cargo containers" loading="lazy">
+                    <div class="img-overlay"><span>Precision Loading</span></div>
+                </div>
+                <div class="about-img-card">
+                    <img src="https://images.pexels.com/photos/4391470/pexels-photo-4391470.jpeg?auto=compress&cs=tinysrgb&w=600" alt="Warehouse worker organizing shipments" loading="lazy">
+                    <div class="img-overlay"><span>Organized Distribution</span></div>
+                </div>
+                <div class="about-img-card">
+                    <img src="https://images.pexels.com/photos/4483608/pexels-photo-4483608.jpeg?auto=compress&cs=tinysrgb&w=600" alt="Professional handling fragile parcels" loading="lazy">
+                    <div class="img-overlay"><span>Careful Handling</span></div>
+                </div>
+            </div>
+            <div class="about-content-grid">
+                <div class="about-text">
+                    <h3>Built on Precision. Driven by People.</h3>
+                    <p>At TOX Express, every parcel is handled by trained professionals who understand the value of your shipments. Our team of 1,000+ logistics experts operates across 150+ countries, ensuring your cargo reaches its destination safely, on time, every time.</p>
+                    <div class="trust-indicators">
+                        <div class="trust-item">
+                            <div class="trust-icon"><i class="fas fa-hands-holding-child"></i></div>
+                            <div>
+                                <h4>White-Glove Handling</h4>
+                                <p>Every package is treated with professional care from pickup to delivery</p>
+                            </div>
+                        </div>
+                        <div class="trust-item">
+                            <div class="trust-icon"><i class="fas fa-shield-halved"></i></div>
+                            <div>
+                                <h4>Fully Insured Shipments</h4>
+                                <p>Comprehensive cargo insurance up to $5M per shipment</p>
+                            </div>
+                        </div>
+                        <div class="trust-item">
+                            <div class="trust-icon"><i class="fas fa-clock-rotate-left"></i></div>
+                            <div>
+                                <h4>24/7 Operations Center</h4>
+                                <p>Round-the-clock monitoring and customer support worldwide</p>
+                            </div>
+                        </div>
+                        <div class="trust-item">
+                            <div class="trust-icon"><i class="fas fa-certificate"></i></div>
+                            <div>
+                                <h4>ISO 9001 Certified</h4>
+                                <p>Quality management systems audited and certified annually</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="about-stats-panel">
+                    <div class="big-stat">
+                        <span class="big-stat-number">150+</span>
+                        <span class="big-stat-label">Countries Served</span>
+                    </div>
+                    <div class="big-stat">
+                        <span class="big-stat-number">50K+</span>
+                        <span class="big-stat-label">Daily Shipments</span>
+                    </div>
+                    <div class="big-stat">
+                        <span class="big-stat-number">99.8%</span>
+                        <span class="big-stat-label">On-Time Rate</span>
+                    </div>
+                    <div class="big-stat">
+                        <span class="big-stat-number">$5B+</span>
+                        <span class="big-stat-label">Annual Volume</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SERVICES -->
+    <section class="services" id="services">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Our Services</h2>
+                <p class="section-subtitle">Comprehensive logistics solutions tailored for your business</p>
+            </div>
+            <div class="services-grid">
+                <div class="service-card">
+                    <div class="service-icon"><i class="fas fa-ship"></i></div>
+                    <h3>Ocean Freight</h3>
+                    <p>Global container networks with competitive rates for FCL and LCL shipments. Reliable port-to-port and door-to-door ocean transport.</p>
+                    <div class="service-features"><span>FCL</span><span>LCL</span><span>Breakbulk</span></div>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon"><i class="fas fa-plane"></i></div>
+                    <h3>Air Cargo</h3>
+                    <p>Time-critical shipments with express, charter, and consolidation services. Temperature-controlled and hazmat-certified air freight.</p>
+                    <div class="service-features"><span>Express</span><span>Charter</span><span>Consolidation</span></div>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon"><i class="fas fa-truck"></i></div>
+                    <h3>Ground Transport</h3>
+                    <p>Domestic and cross-border trucking with real-time GPS, dedicated fleet operations, and multimodal connectivity.</p>
+                    <div class="service-features"><span>Trucking</span><span>Rail</span><span>Multimodal</span></div>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon"><i class="fas fa-warehouse"></i></div>
+                    <h3>Warehousing</h3>
+                    <p>Strategic global warehouse locations with advanced inventory management, pick-and-pack, and distribution center services.</p>
+                    <div class="service-features"><span>Storage</span><span>Fulfillment</span><span>Distribution</span></div>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon"><i class="fas fa-file-shield"></i></div>
+                    <h3>Customs Clearance</h3>
+                    <p>Expert customs brokerage and compliance ensuring smooth border crossing with minimal delays worldwide.</p>
+                    <div class="service-features"><span>Brokerage</span><span>Compliance</span><span>Documentation</span></div>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon"><i class="fas fa-satellite-dish"></i></div>
+                    <h3>Satellite Tracking</h3>
+                    <p>Enterprise-grade tracking with live satellite imagery, street-level mapping, ETA predictions, and instant alerts.</p>
+                    <div class="service-features"><span>Satellite</span><span>Street View</span><span>Real-Time</span></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- WAREHOUSE SECTION -->
+    <section class="warehouse-section" id="warehouse">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title"><i class="fas fa-warehouse"></i> Our Global Warehouse Network</h2>
+                <p class="section-subtitle">State-of-the-art facilities across 6 continents</p>
+            </div>
+            <div class="warehouse-hero">
+                <div class="warehouse-video-wrap">
+                    <video autoplay muted loop playsinline preload="auto" poster="https://images.pexels.com/photos/4481259/pexels-photo-4481259.jpeg?auto=compress&cs=tinysrgb&w=1260">
+                        <source src="https://videos.pexels.com/video-files/6169129/6169129-hd_1920_1080_25fps.mp4" type="video/mp4">
+                        <source src="https://videos.pexels.com/video-files/4481325/4481325-hd_1920_1080_25fps.mp4" type="video/mp4">
+                    </video>
+                    <div class="warehouse-video-overlay">
+                        <h3><i class="fas fa-warehouse" style="margin-right:12px;color:var(--tox-gold);"></i>12 Million+ Sq Ft of Storage</h3>
+                        <p>Climate-controlled, high-security distribution centers strategically positioned along major trade routes</p>
+                    </div>
+                </div>
+            </div>
+            <div class="warehouse-features-grid">
+                <div class="wh-feature">
+                    <img src="https://images.pexels.com/photos/4481259/pexels-photo-4481259.jpeg?auto=compress&cs=tinysrgb&w=600" alt="Modern warehouse interior" loading="lazy">
+                    <h4>Smart Inventory</h4>
+                    <p>RFID-powered real-time inventory management with 99.99% accuracy</p>
+                </div>
+                <div class="wh-feature">
+                    <img src="https://images.pexels.com/photos/4483775/pexels-photo-4483775.jpeg?auto=compress&cs=tinysrgb&w=600" alt="Workers processing orders" loading="lazy">
+                    <h4>Pick & Pack</h4>
+                    <p>High-speed order fulfillment with same-day processing guarantee</p>
+                </div>
+                <div class="wh-feature">
+                    <img src="https://images.pexels.com/photos/4481326/pexels-photo-4481326.jpeg?auto=compress&cs=tinysrgb&w=600" alt="Temperature controlled storage" loading="lazy">
+                    <h4>Climate Control</h4>
+                    <p>Multi-zone temperature-controlled environments for sensitive goods</p>
+                </div>
+                <div class="wh-feature">
+                    <img src="https://images.pexels.com/photos/4483774/pexels-photo-4483774.jpeg?auto=compress&cs=tinysrgb&w=600" alt="Security monitoring" loading="lazy">
+                    <h4>24/7 Security</h4>
+                    <p>AI-powered surveillance, biometric access, and armed patrol guards</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- COST CALCULATOR -->
+    <section class="calculator-section" id="calculator">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title"><i class="fas fa-calculator"></i> Shipping Cost Calculator</h2>
+                <p class="section-subtitle">Get an instant estimate for your shipment</p>
+            </div>
+            <div class="calculator-wrap">
+                <form class="calc-form" onsubmit="event.preventDefault(); calculateShipping();">
+                    <div class="calc-row">
+                        <div class="calc-group">
+                            <label><i class="fas fa-map-marker-alt"></i> Origin City</label>
+                            <select id="calcOrigin" required>
+                                <option value="">Select origin...</option>
+                                <option value="newyork">New York, USA</option>
+                                <option value="london">London, UK</option>
+                                <option value="shanghai">Shanghai, China</option>
+                                <option value="dubai">Dubai, UAE</option>
+                                <option value="singapore">Singapore</option>
+                                <option value="tokyo">Tokyo, Japan</option>
+                                <option value="sydney">Sydney, Australia</option>
+                                <option value="mumbai">Mumbai, India</option>
+                                <option value="lagos">Lagos, Nigeria</option>
+                                <option value="saopaulo">Sao Paulo, Brazil</option>
+                                <option value="rotterdam">Rotterdam, Netherlands</option>
+                                <option value="hamburg">Hamburg, Germany</option>
+                            </select>
+                        </div>
+                        <div class="calc-group">
+                            <label><i class="fas fa-flag-checkered"></i> Destination City</label>
+                            <select id="calcDestination" required>
+                                <option value="">Select destination...</option>
+                                <option value="newyork">New York, USA</option>
+                                <option value="london">London, UK</option>
+                                <option value="shanghai">Shanghai, China</option>
+                                <option value="dubai">Dubai, UAE</option>
+                                <option value="singapore">Singapore</option>
+                                <option value="tokyo">Tokyo, Japan</option>
+                                <option value="sydney">Sydney, Australia</option>
+                                <option value="mumbai">Mumbai, India</option>
+                                <option value="lagos">Lagos, Nigeria</option>
+                                <option value="saopaulo">Sao Paulo, Brazil</option>
+                                <option value="rotterdam">Rotterdam, Netherlands</option>
+                                <option value="hamburg">Hamburg, Germany</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="calc-row">
+                        <div class="calc-group">
+                            <label><i class="fas fa-weight-hanging"></i> Weight (kg)</label>
+                            <input type="number" id="calcWeight" placeholder="e.g. 25" min="0.1" step="0.1" required>
+                        </div>
+                        <div class="calc-group">
+                            <label><i class="fas fa-shipping-fast"></i> Shipping Method</label>
+                            <select id="calcMethod" required>
+                                <option value="economy">Economy (15-25 days)</option>
+                                <option value="standard" selected>Standard (7-14 days)</option>
+                                <option value="express">Express (3-5 days)</option>
+                                <option value="overnight">Overnight (1-2 days)</option>
+                                <option value="ocean">Ocean Freight (25-45 days)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="calc-row">
+                        <div class="calc-group">
+                            <label><i class="fas fa-box"></i> Package Type</label>
+                            <select id="calcType">
+                                <option value="parcel">Standard Parcel</option>
+                                <option value="document">Document</option>
+                                <option value="fragile">Fragile Item</option>
+                                <option value="hazmat">Hazardous Material</option>
+                                <option value="pallet">Pallet / Freight</option>
+                            </select>
+                        </div>
+                        <div class="calc-group">
+                            <label><i class="fas fa-ruler-combined"></i> Dimensions (cm)</label>
+                            <div class="dimension-inputs">
+                                <input type="number" id="calcLength" placeholder="L" min="1">
+                                <span>x</span>
+                                <input type="number" id="calcWidth" placeholder="W" min="1">
+                                <span>x</span>
+                                <input type="number" id="calcHeight" placeholder="H" min="1">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="calc-extras">
+                        <label class="calc-checkbox">
+                            <input type="checkbox" id="calcInsurance"> Insurance Coverage
+                        </label>
+                        <label class="calc-checkbox">
+                            <input type="checkbox" id="calcSignature"> Signature Required
+                        </label>
+                        <label class="calc-checkbox">
+                            <input type="checkbox" id="calcTracking" checked> Priority Tracking
+                        </label>
+                    </div>
+                    <button type="submit" class="btn-primary-large calc-btn"><i class="fas fa-calculator"></i> Calculate Cost</button>
+                </form>
+                <div class="calc-result" id="calcResult" style="display:none;">
+                    <div class="result-header">
+                        <i class="fas fa-receipt"></i>
+                        <h3>Shipping Estimate</h3>
+                    </div>
+                    <div class="result-details">
+                        <div class="result-row"><span>Route</span><strong id="resultRoute">-</strong></div>
+                        <div class="result-row"><span>Method</span><strong id="resultMethod">-</strong></div>
+                        <div class="result-row"><span>Billable Weight</span><strong id="resultWeight">-</strong></div>
+                        <div class="result-row"><span>Est. Delivery</span><strong id="resultETA">-</strong></div>
+                        <div class="result-divider"></div>
+                        <div class="result-row"><span>Base Cost</span><strong id="resultBase">-</strong></div>
+                        <div class="result-row"><span>Extras</span><strong id="resultExtras">-</strong></div>
+                        <div class="result-divider"></div>
+                        <div class="result-row result-total"><span>Total Estimate</span><strong id="resultTotal">-</strong></div>
+                    </div>
+                    <p class="result-disclaimer">* Prices are estimates. Final costs may vary based on actual weight and dimensions.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- TRACKING SECTION -->
+    <section class="tracking-section" id="tracking">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title"><i class="fas fa-satellite-dish"></i> Live Shipment Tracking</h2>
+                <p class="section-subtitle">Real-time satellite and street-level tracking for every shipment</p>
+            </div>
+            <div class="tracking-search-wrap">
+                <form onsubmit="handleTrackingSearch(event)" novalidate>
+                    <div class="search-group">
+                        <div class="search-input-wrap">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="trackingNumber" placeholder="Enter Tracking Number (e.g., TOX-2026-001234)" aria-label="Tracking number" required>
+                        </div>
+                        <button type="submit" class="btn-primary"><i class="fas fa-search"></i> Track</button>
+                    </div>
+                    <div id="searchError" class="error-message" role="alert" aria-live="polite"></div>
+                </form>
+                <div id="recentSearches" class="recent-searches" style="display: none; margin-top: 1rem;">
+                    <p class="recent-title">Recent Searches:</p>
+                    <div id="recentSearchesList" class="recent-list"></div>
+                    <button type="button" class="btn-secondary" style="width: 100%; margin-top: 0.5rem;" onclick="clearTrackingHistory()">Clear History</button>
+                </div>
+            </div>
+            <div class="tracking-map-container">
+                <div class="map-controls">
+                    <button class="map-ctrl active" onclick="setMapView('street')" title="Street View"><i class="fas fa-road"></i> Street</button>
+                    <button class="map-ctrl" onclick="setMapView('satellite')" title="Satellite View"><i class="fas fa-satellite"></i> Satellite</button>
+                    <button class="map-ctrl" onclick="setMapView('terrain')" title="Terrain View"><i class="fas fa-mountain"></i> Terrain</button>
+                </div>
+                <div id="trackingMap" class="tracking-map"></div>
+                <div class="map-legend">
+                    <div class="legend-item"><span class="legend-dot origin"></span> Origin</div>
+                    <div class="legend-item"><span class="legend-dot current"></span> Current Position</div>
+                    <div class="legend-item"><span class="legend-dot destination"></span> Destination</div>
+                </div>
+            </div>
+            <div class="cargo-container">
+                <h3 class="cargo-section-title"><i class="fas fa-boxes-stacked"></i> Active Shipments</h3>
+                <div class="cargo-grid" role="list" aria-label="Active shipments"></div>
+            </div>
+            <div id="cargoModal" class="cargo-modal" role="dialog" aria-labelledby="modalTitle" aria-hidden="true">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3 id="modalTitle">Shipment Details</h3>
+                        <button class="modal-close" aria-label="Close modal" onclick="closeCargoModal()">&times;</button>
+                    </div>
+                    <div class="modal-body" id="modalBody"></div>
+                    <div class="modal-footer">
+                        <button class="btn-secondary" onclick="closeCargoModal()">Close</button>
+                        <button class="btn-primary" onclick="downloadShipmentPDF()"><i class="fas fa-file-pdf"></i> Download PDF</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- LIVE OPERATIONS DASHBOARD -->
+    <section class="live-ops" id="operations">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Live Operations Dashboard</h2>
+                <p class="section-subtitle">Real-time visibility into our global logistics network</p>
+            </div>
+            <div class="ops-dashboard">
+                <div class="ops-metrics">
+                    <div class="metric-card">
+                        <div class="metric-icon"><i class="fas fa-boxes-stacked"></i></div>
+                        <div class="metric-data">
+                            <span class="metric-number" id="active-shipments">1,247</span>
+                            <span class="metric-label">Active Shipments</span>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon"><i class="fas fa-globe"></i></div>
+                        <div class="metric-data">
+                            <span class="metric-number" id="countries-served">156</span>
+                            <span class="metric-label">Countries Served</span>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon"><i class="fas fa-check-circle"></i></div>
+                        <div class="metric-data">
+                            <span class="metric-number" id="on-time-rate">99.8%</span>
+                            <span class="metric-label">On-Time Delivery</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="ops-map">
+                    <div id="globalMap" class="map-container"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- WHY CHOOSE TOX EXPRESS -->
+    <section class="why-choose" id="why">
+        <div class="container">
+            <div class="why-grid">
+                <div class="why-content">
+                    <h2>Why TOX Express?</h2>
+                    <p>We are not just a delivery company - we are your strategic logistics partner committed to excellence, innovation, and your business growth.</p>
+                    <div class="why-features">
+                        <div class="why-feature">
+                            <div class="feature-icon"><i class="fas fa-trophy"></i></div>
+                            <div class="feature-text">
+                                <h4>Industry Leaders</h4>
+                                <p>25+ years of expertise in global logistics and supply chain management</p>
+                            </div>
+                        </div>
+                        <div class="why-feature">
+                            <div class="feature-icon"><i class="fas fa-satellite-dish"></i></div>
+                            <div class="feature-text">
+                                <h4>Satellite Tracking</h4>
+                                <p>Real satellite and street-level tracking for every single shipment</p>
+                            </div>
+                        </div>
+                        <div class="why-feature">
+                            <div class="feature-icon"><i class="fas fa-lock"></i></div>
+                            <div class="feature-text">
+                                <h4>Security First</h4>
+                                <p>Advanced security protocols and full cargo insurance for peace of mind</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="why-visual">
+                    <div class="achievement-cards">
+                        <div class="achievement-card">
+                            <span class="achievement-number">$5B+</span>
+                            <span class="achievement-label">Annual Volume</span>
+                        </div>
+                        <div class="achievement-card">
+                            <span class="achievement-number">50K+</span>
+                            <span class="achievement-label">Daily Shipments</span>
+                        </div>
+                        <div class="achievement-card">
+                            <span class="achievement-number">1000+</span>
+                            <span class="achievement-label">Team Members</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CERTIFICATIONS -->
+    <section class="certifications">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Certifications & Compliance</h2>
+                <p class="section-subtitle">Internationally recognized standards ensuring your cargo is in trusted hands</p>
+            </div>
+            <div class="cert-grid">
+                <div class="cert-card"><div class="cert-icon"><i class="fas fa-certificate"></i></div><h4>ISO 9001:2015</h4><p>Quality Management</p></div>
+                <div class="cert-card"><div class="cert-icon"><i class="fas fa-shield-halved"></i></div><h4>ISO 28001</h4><p>Supply Chain Security</p></div>
+                <div class="cert-card"><div class="cert-icon"><i class="fas fa-leaf"></i></div><h4>ISO 14001</h4><p>Environmental Management</p></div>
+                <div class="cert-card"><div class="cert-icon"><i class="fas fa-handshake"></i></div><h4>C-TPAT</h4><p>Customs-Trade Partnership</p></div>
+                <div class="cert-card"><div class="cert-icon"><i class="fas fa-plane"></i></div><h4>IATA & IMDG</h4><p>Air & Maritime Compliant</p></div>
+                <div class="cert-card"><div class="cert-icon"><i class="fas fa-database"></i></div><h4>SOC 2 Type II</h4><p>Data Security Certified</p></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- TESTIMONIALS - THICK PROOF SECTION -->
+    <section class="testimonials" id="testimonials">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title"><i class="fas fa-award"></i> Verified Client Results</h2>
+                <p class="section-subtitle">Real metrics, real companies, real proof of performance</p>
+            </div>
+            <div class="testimonial-slider">
+                <div class="testimonial-card active">
+                    <div class="testimonial-proof">
+                        <div class="testimonial-proof-header">
+                            <div class="testimonial-company-logo"><i class="fas fa-microchip"></i></div>
+                            <div class="testimonial-stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+                        </div>
+                        <div class="testimonial-metrics">
+                            <div class="proof-metric"><span class="proof-metric-value">42%</span><span class="proof-metric-label">Cost Reduction</span></div>
+                            <div class="proof-metric"><span class="proof-metric-value">99.9%</span><span class="proof-metric-label">On-Time Rate</span></div>
+                            <div class="proof-metric"><span class="proof-metric-value">2.1M</span><span class="proof-metric-label">Units Shipped</span></div>
+                        </div>
+                        <p class="testimonial-text"><i class="fas fa-quote-left" style="color:var(--tox-red);margin-right:10px;font-size:1.3rem;"></i>TOX Express completely overhauled our supply chain. We went from 3-day domestic delays to same-day fulfillment. Their satellite tracking eliminated blind spots and the warehouse network cut our storage costs nearly in half. This isn't a vendor — it's our most strategic partner.</p>
+                    </div>
+                    <div class="testimonial-author">
+                        <div class="author-avatar"><i class="fas fa-user-tie"></i></div>
+                        <div class="author-info">
+                            <h5>James Richardson</h5>
+                            <span>VP Supply Chain, TechCorp International</span>
+                            <div class="testimonial-badge"><i class="fas fa-check-circle"></i> Verified Enterprise Client</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="testimonial-card">
+                    <div class="testimonial-proof">
+                        <div class="testimonial-proof-header">
+                            <div class="testimonial-company-logo"><i class="fas fa-shirt"></i></div>
+                            <div class="testimonial-stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+                        </div>
+                        <div class="testimonial-metrics">
+                            <div class="proof-metric"><span class="proof-metric-value">30%</span><span class="proof-metric-label">Cost Savings</span></div>
+                            <div class="proof-metric"><span class="proof-metric-value">48hr</span><span class="proof-metric-label">Avg Delivery</span></div>
+                            <div class="proof-metric"><span class="proof-metric-value">87</span><span class="proof-metric-label">Countries Reached</span></div>
+                        </div>
+                        <p class="testimonial-text"><i class="fas fa-quote-left" style="color:var(--tox-red);margin-right:10px;font-size:1.3rem;"></i>From customs clearance to last-mile delivery, TOX Express handles everything flawlessly. They reduced our logistics costs by 30% while cutting average delivery time from 5 days to 48 hours across 87 countries. Our customer satisfaction scores jumped 22 points.</p>
+                    </div>
+                    <div class="testimonial-author">
+                        <div class="author-avatar"><i class="fas fa-user-tie"></i></div>
+                        <div class="author-info">
+                            <h5>Maria Santos</h5>
+                            <span>Logistics Director, Global Fashion Group</span>
+                            <div class="testimonial-badge"><i class="fas fa-check-circle"></i> 5+ Year Partner</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="testimonial-card">
+                    <div class="testimonial-proof">
+                        <div class="testimonial-proof-header">
+                            <div class="testimonial-company-logo"><i class="fas fa-earth-asia"></i></div>
+                            <div class="testimonial-stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+                        </div>
+                        <div class="testimonial-metrics">
+                            <div class="proof-metric"><span class="proof-metric-value">$12M</span><span class="proof-metric-label">Annual Savings</span></div>
+                            <div class="proof-metric"><span class="proof-metric-value">100%</span><span class="proof-metric-label">Cargo Insured</span></div>
+                            <div class="proof-metric"><span class="proof-metric-value">24/7</span><span class="proof-metric-label">Live Support</span></div>
+                        </div>
+                        <p class="testimonial-text"><i class="fas fa-quote-left" style="color:var(--tox-red);margin-right:10px;font-size:1.3rem;"></i>The cost calculator and real-time satellite tracking changed everything. We quote clients in seconds, track every container live, and TOX's 24/7 operations team resolves issues before we even know about them. They saved us $12 million in freight costs last year alone.</p>
+                    </div>
+                    <div class="testimonial-author">
+                        <div class="author-avatar"><i class="fas fa-user-tie"></i></div>
+                        <div class="author-info">
+                            <h5>David Chen</h5>
+                            <span>CEO, Asia Pacific Trading Ltd</span>
+                            <div class="testimonial-badge"><i class="fas fa-check-circle"></i> Top-Tier Account</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="testimonial-card">
+                    <div class="testimonial-proof">
+                        <div class="testimonial-proof-header">
+                            <div class="testimonial-company-logo"><i class="fas fa-pills"></i></div>
+                            <div class="testimonial-stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+                        </div>
+                        <div class="testimonial-metrics">
+                            <div class="proof-metric"><span class="proof-metric-value">0</span><span class="proof-metric-label">Temp Violations</span></div>
+                            <div class="proof-metric"><span class="proof-metric-value">15K+</span><span class="proof-metric-label">Sensitive Shipments</span></div>
+                            <div class="proof-metric"><span class="proof-metric-value">FDA</span><span class="proof-metric-label">Compliant Chain</span></div>
+                        </div>
+                        <p class="testimonial-text"><i class="fas fa-quote-left" style="color:var(--tox-red);margin-right:10px;font-size:1.3rem;"></i>For pharmaceutical logistics, you can't afford errors. TOX Express delivered over 15,000 temperature-sensitive shipments with zero violations. Their climate-controlled warehousing and real-time monitoring gave us the FDA-compliant cold chain we needed to scale globally.</p>
+                    </div>
+                    <div class="testimonial-author">
+                        <div class="author-avatar"><i class="fas fa-user-tie"></i></div>
+                        <div class="author-info">
+                            <h5>Dr. Amara Osei</h5>
+                            <span>Chief Operations Officer, PharmaTech Global</span>
+                            <div class="testimonial-badge"><i class="fas fa-check-circle"></i> Regulated Industry Client</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="testimonial-card">
+                    <div class="testimonial-proof">
+                        <div class="testimonial-proof-header">
+                            <div class="testimonial-company-logo"><i class="fas fa-car"></i></div>
+                            <div class="testimonial-stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+                        </div>
+                        <div class="testimonial-metrics">
+                            <div class="proof-metric"><span class="proof-metric-value">3,200</span><span class="proof-metric-label">Vehicles Shipped</span></div>
+                            <div class="proof-metric"><span class="proof-metric-value">0.01%</span><span class="proof-metric-label">Damage Rate</span></div>
+                            <div class="proof-metric"><span class="proof-metric-value">$0</span><span class="proof-metric-label">Claims Unpaid</span></div>
+                        </div>
+                        <p class="testimonial-text"><i class="fas fa-quote-left" style="color:var(--tox-red);margin-right:10px;font-size:1.3rem;"></i>Shipping 3,200 luxury vehicles across 4 continents with a 0.01% damage rate — that's not logistics, that's precision engineering. TOX Express treats every shipment like it's worth a million dollars. Because to us, it is. Their insurance and claims process is the best in the industry.</p>
+                    </div>
+                    <div class="testimonial-author">
+                        <div class="author-avatar"><i class="fas fa-user-tie"></i></div>
+                        <div class="author-info">
+                            <h5>Klaus Hoffmann</h5>
+                            <span>Head of Distribution, EuroMotors AG</span>
+                            <div class="testimonial-badge"><i class="fas fa-check-circle"></i> Premium Logistics Client</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="testimonial-dots">
+                <button class="dot active" onclick="switchTestimonial(0)" aria-label="Testimonial 1"></button>
+                <button class="dot" onclick="switchTestimonial(1)" aria-label="Testimonial 2"></button>
+                <button class="dot" onclick="switchTestimonial(2)" aria-label="Testimonial 3"></button>
+                <button class="dot" onclick="switchTestimonial(3)" aria-label="Testimonial 4"></button>
+                <button class="dot" onclick="switchTestimonial(4)" aria-label="Testimonial 5"></button>
+            </div>
+        </div>
+    </section>
+
+    <!-- PARTNERS -->
+    <section class="partners" id="partners">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Trusted Partners</h2>
+                <p class="section-subtitle">Strategic alliances powering global logistics excellence</p>
+            </div>
+            <div class="partners-grid">
+                <div class="partner-card"><div class="partner-icon"><i class="fas fa-ship"></i></div><h4>Maersk</h4><p>Ocean Freight Partner</p></div>
+                <div class="partner-card"><div class="partner-icon"><i class="fas fa-plane"></i></div><h4>Emirates SkyCargo</h4><p>Air Cargo Partner</p></div>
+                <div class="partner-card"><div class="partner-icon"><i class="fas fa-box"></i></div><h4>DHL Supply Chain</h4><p>Warehousing Partner</p></div>
+                <div class="partner-card"><div class="partner-icon"><i class="fas fa-truck"></i></div><h4>FedEx Logistics</h4><p>Last-Mile Delivery</p></div>
+                <div class="partner-card"><div class="partner-icon"><i class="fas fa-anchor"></i></div><h4>CMA CGM</h4><p>Container Shipping</p></div>
+                <div class="partner-card"><div class="partner-icon"><i class="fas fa-globe"></i></div><h4>Kuehne+Nagel</h4><p>Supply Chain Solutions</p></div>
+                <div class="partner-card"><div class="partner-icon"><i class="fas fa-warehouse"></i></div><h4>Prologis</h4><p>Warehouse Infrastructure</p></div>
+                <div class="partner-card"><div class="partner-icon"><i class="fas fa-satellite"></i></div><h4>Descartes Systems</h4><p>Tracking Technology</p></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CONTACT SECTION -->
+    <section class="contact-section" id="contact">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Contact TOX Express</h2>
+                <p class="section-subtitle">Get in touch with our global logistics team</p>
+            </div>
+            <div class="contact-grid">
+                <div class="contact-info">
+                    <h3>Get In Touch</h3>
+                    <p>Our team is available 24/7 to assist with your logistics needs.</p>
+                    <div class="info-items">
+                        <div class="info-item"><i class="fas fa-phone"></i><div><h5>Phone</h5><p>+1-800-TOX-SHIP</p></div></div>
+                        <div class="info-item"><i class="fas fa-envelope"></i><div><h5>Email</h5><p>info@toxexpress.org</p></div></div>
+                        <div class="info-item"><i class="fas fa-location-dot"></i><div><h5>Headquarters</h5><p>500 TOX Tower, Marina Boulevard, Singapore 018989</p></div></div>
+                        <div class="info-item"><i class="fas fa-clock"></i><div><h5>Operating Hours</h5><p>24/7 Global Operations Center</p></div></div>
+                    </div>
+                </div>
+                <div class="contact-form-wrap">
+                    <form id="contactForm" onsubmit="handleContactForm(event)" novalidate>
+                        <div class="form-row">
+                            <div class="form-group"><label for="contactName">Full Name</label><input type="text" id="contactName" placeholder="Your Full Name" required></div>
+                            <div class="form-group"><label for="contactEmail">Email Address</label><input type="email" id="contactEmail" placeholder="your@email.com" required></div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group"><label for="contactCompany">Company</label><input type="text" id="contactCompany" placeholder="Company Name"></div>
+                            <div class="form-group">
+                                <label for="serviceType">Service Required</label>
+                                <select id="serviceType">
+                                    <option value="">Select Service</option>
+                                    <option value="ocean">Ocean Freight</option>
+                                    <option value="air">Air Cargo</option>
+                                    <option value="ground">Ground Transport</option>
+                                    <option value="warehouse">Warehousing</option>
+                                    <option value="customs">Customs Clearance</option>
+                                    <option value="tracking">Tracking Solution</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group"><label for="contactMessage">Message</label><textarea id="contactMessage" rows="5" placeholder="Tell us about your logistics needs..." required></textarea></div>
+                        <button type="submit" class="btn-primary btn-full"><i class="fas fa-paper-plane"></i> Send Message</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <div class="footer-logo">
+                        <svg width="40" height="40" viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="20" cy="14" r="6" fill="#E63946"/>
+                            <rect x="14" y="20" width="12" height="16" rx="2" fill="#E63946"/>
+                            <rect x="8" y="22" width="8" height="3" rx="1.5" fill="#E63946" transform="rotate(-20 8 22)"/>
+                            <rect x="26" y="22" width="8" height="3" rx="1.5" fill="#E63946" transform="rotate(20 26 22)"/>
+                            <rect x="28" y="18" width="16" height="14" rx="2" fill="#E8C84A" stroke="#1D3557" stroke-width="1.5"/>
+                            <line x1="36" y1="18" x2="36" y2="32" stroke="#1D3557" stroke-width="1"/>
+                            <line x1="28" y1="25" x2="44" y2="25" stroke="#1D3557" stroke-width="1"/>
+                        </svg>
+                        <span>TOX EXPRESS</span>
+                    </div>
+                    <p>Global logistics excellence. Delivering your cargo safely and on time, everywhere in the world.</p>
+                    <div class="social-links">
+                        <a href="#" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
+                        <a href="#" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+                        <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+                    </div>
+                </div>
+                <div class="footer-section">
+                    <h4>Services</h4>
+                    <ul>
+                        <li><a href="#services">Ocean Freight</a></li>
+                        <li><a href="#services">Air Cargo</a></li>
+                        <li><a href="#services">Ground Transport</a></li>
+                        <li><a href="#warehouse">Warehousing</a></li>
+                        <li><a href="#tracking">Satellite Tracking</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Company</h4>
+                    <ul>
+                        <li><a href="#about">About Us</a></li>
+                        <li><a href="#why">Why TOX Express</a></li>
+                        <li><a href="#partners">Partners</a></li>
+                        <li><a href="#testimonials">Testimonials</a></li>
+                        <li><a href="#contact">Contact</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Legal</h4>
+                    <ul>
+                        <li><a href="#">Privacy Policy</a></li>
+                        <li><a href="#">Terms of Service</a></li>
+                        <li><a href="#">Cookie Policy</a></li>
+                        <li><a href="#">Compliance</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 TOX Express Delivery Services. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- CHAT WIDGET -->
+    <div class="chat-widget" id="chatWidget">
+        <button class="chat-toggle" onclick="toggleChat()" aria-label="Open chat support">
+            <i class="fas fa-comments"></i>
+        </button>
+        <div class="chat-window" id="chatWindow">
+            <div class="chat-header">
+                <h4><i class="fas fa-headset"></i> TOX Express Support</h4>
+                <button onclick="toggleChat()" aria-label="Close chat">&times;</button>
+            </div>
+            <div class="chat-messages" id="chatMessages">
+                <div class="chat-message bot">
+                    <p>Welcome to TOX Express! How can we assist you today?</p>
+                </div>
+            </div>
+            <div class="chat-input-wrap">
+                <input type="text" id="chatInput" placeholder="Type your message..." onkeypress="if(event.key==='Enter')sendChatMessage()">
+                <button onclick="sendChatMessage()" aria-label="Send message"><i class="fas fa-paper-plane"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="js/script.js"></script>
+</body>
+</html>

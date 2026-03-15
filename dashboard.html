@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - TOX Express Delivery Services</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <nav>
+        <div class="nav-container">
+            <h1>TOX Express Delivery Services</h1>
+            <ul>
+                <li><a href="index.html">Home</a></li>
+                <li><a href="tracking.html">Tracking</a></li>
+                <li><a href="dashboard.html">Dashboard</a></li>
+                <li><a href="partners.html">Partners</a></li>
+                <li><a href="#contact">Contact</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <section class="hero" style="background: linear-gradient(rgba(255,255,255,0.9), rgba(255,255,255,0.9)), url('https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=2400&q=80');">
+        <div class="hero-content">
+            <h1>OPERATIONS DASHBOARD</h1>
+            <p>Real-time insights into our global delivery operations.</p>
+        </div>
+    </section>
+
+    <section class="dashboard">
+        <div class="container">
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <h3>Active Shipments</h3>
+                    <p id="activeShipments">2,847</p>
+                </div>
+                <div class="kpi-card">
+                    <h3>Delivery Vehicles</h3>
+                    <p id="deliveryVehicles">1,203</p>
+                </div>
+                <div class="kpi-card">
+                    <h3>Ports Served</h3>
+                    <p id="portsServed">156</p>
+                </div>
+                <div class="kpi-card">
+                    <h3>Packages Delivered</h3>
+                    <p id="packagesDelivered">89,450</p>
+                </div>
+            </div>
+
+            <div class="charts">
+                <div class="chart-container">
+                    <h3>Shipment Status Distribution</h3>
+                    <canvas id="statusChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3>Monthly Deliveries</h3>
+                    <canvas id="monthlyChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer id="contact">
+        <div class="footer-content">
+            <div class="footer-section">
+                <h3>Contact Us</h3>
+                <p>Email: info@toxexpress.org</p>
+                <p>Phone: +1 (555) 123-4567</p>
+            </div>
+            <div class="footer-section">
+                <h3>Follow Us</h3>
+                <p>Social media links</p>
+            </div>
+        </div>
+        <p>&copy; 2026 TOX Express Delivery Services. All rights reserved.</p>
+    </footer>
+
+    <script src="js/dashboard.js"></script>
+</body>
+</html>

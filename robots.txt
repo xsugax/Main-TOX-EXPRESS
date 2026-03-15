@@ -1,0 +1,15 @@
+User-agent: *
+Allow: /
+
+# Block admin areas from search engines
+Disallow: /admin.html
+Disallow: /data/
+
+# Allow important pages
+Allow: /index.html
+Allow: /tracking.html
+Allow: /dashboard.html
+Allow: /partners.html
+
+# Sitemap location
+Sitemap: https://toxexpress.org/sitemap.xml
