@@ -2175,6 +2175,29 @@ img { max-width: 100%; height: auto; display: block; }
     margin-bottom: 1.5rem;
 }
 
+.footer-email {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 1.2rem;
+    font-size: 0.85rem;
+}
+
+.footer-email i {
+    color: var(--tox-red);
+    font-size: 1rem;
+}
+
+.footer-email a {
+    color: rgba(255,255,255,0.7);
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.footer-email a:hover {
+    color: var(--tox-gold);
+}
+
 .footer-social {
     display: flex;
     gap: 12px;

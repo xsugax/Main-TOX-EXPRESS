@@ -145,10 +145,14 @@ function animateCounters() {
 function startLivePulse(counter, baseTarget) {
     var label = counter.nextElementSibling ? counter.nextElementSibling.textContent.trim() : '';
     if (label === 'Daily Shipments') {
-        setInterval(function() {
-            var fluctuation = Math.floor(Math.random() * 201) - 100;
-            counter.textContent = (baseTarget + fluctuation).toLocaleString();
-        }, 3000);
+        var current = baseTarget;
+        function gentleTick() {
+            current += 1;
+            counter.textContent = current.toLocaleString();
+            var nextDelay = 6000 + Math.floor(Math.random() * 9000);
+            setTimeout(gentleTick, nextDelay);
+        }
+        setTimeout(gentleTick, 8000);
     } else if (label === 'Countries') {
         setInterval(function() {
             var tick = Math.floor(Math.random() * 3);
@@ -475,7 +479,12 @@ var cityCoords = {
     tokyo: { lat: 35.68, lng: 139.69 }
 };
 
-var cargoDatabase = [
+var cargoDatabase = (function() {
+    try {
+        var stored = localStorage.getItem('toxActiveShipments');
+        if (stored) return JSON.parse(stored);
+    } catch(e) {}
+    return [
     {
         id: 'TOX-2026-001234',
         origin: 'Shanghai',
@@ -567,6 +576,7 @@ var cargoDatabase = [
         ]
     }
 ];
+})();
 
 
 // ==========================================

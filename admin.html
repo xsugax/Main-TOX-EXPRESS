@@ -801,6 +801,98 @@
             .stats-row { grid-template-columns: 1fr; }
             .admin-tab { padding: 12px 14px; font-size: 0.78rem; }
         }
+
+        /* ==================== ADMIN-UNIQUE THEME ==================== */
+        .admin-shell {
+            background: linear-gradient(180deg, #060d18 0%, #0a1628 100%);
+        }
+
+        .admin-topbar {
+            background: linear-gradient(90deg, #0c1a2e 0%, #132743 100%);
+            border-bottom: 2px solid rgba(0, 180, 216, 0.2);
+        }
+
+        .admin-tabs {
+            background: linear-gradient(90deg, #0a1525 0%, #0f1f38 100%);
+            border-bottom-color: rgba(0, 180, 216, 0.15);
+        }
+
+        .admin-tab.active {
+            color: #00b4d8;
+            border-color: #00b4d8;
+        }
+
+        .topbar-divider {
+            background: rgba(0, 180, 216, 0.2);
+        }
+
+        .status-dot {
+            background: #00b4d8;
+            box-shadow: 0 0 8px rgba(0, 180, 216, 0.6);
+        }
+
+        /* On Hold badge */
+        .badge-on-hold {
+            background: rgba(245, 158, 11, 0.15);
+            color: #fbbf24;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        /* Warning / Hold action button */
+        .action-btn.warning {
+            color: #f59e0b;
+        }
+        .action-btn.warning:hover {
+            background: rgba(245, 158, 11, 0.2);
+        }
+
+        /* ==================== EMAIL COMPOSER ==================== */
+        .email-composer-layout {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .email-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 1.5rem;
+        }
+
+        .btn-preview {
+            flex: 1;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+            border: 2px solid rgba(0, 180, 216, 0.3);
+            background: rgba(0, 180, 216, 0.08);
+            color: #00b4d8;
+            transition: all 0.3s ease;
+        }
+
+        .btn-preview:hover {
+            background: rgba(0, 180, 216, 0.15);
+            border-color: rgba(0, 180, 216, 0.5);
+        }
+
+        .email-preview-frame {
+            background: #ffffff;
+            border-radius: 0 0 12px 12px;
+            min-height: 400px;
+            overflow: auto;
+        }
+
+        .email-preview-frame iframe {
+            width: 100%;
+            min-height: 500px;
+            border: none;
+        }
+
+        @media (max-width: 480px) {
+            .email-actions { flex-direction: column; }
+        }
     </style>
 </head>
 <body>
@@ -868,8 +960,10 @@
             <button class="admin-tab" onclick="switchTab('shipments')"><i class="fas fa-boxes-stacked"></i> Shipments</button>
             <button class="admin-tab" onclick="switchTab('backdate')"><i class="fas fa-clock-rotate-left"></i> Backdate Delivery</button>
             <button class="admin-tab" onclick="switchTab('create')"><i class="fas fa-plus-circle"></i> Create Shipment</button>
+            <button class="admin-tab" onclick="switchTab('active')"><i class="fas fa-globe"></i> Active Shipments</button>
             <button class="admin-tab" onclick="switchTab('visitors')"><i class="fas fa-users"></i> Visitors</button>
             <button class="admin-tab" onclick="switchTab('audit')"><i class="fas fa-clipboard-list"></i> Audit Log</button>
+            <button class="admin-tab" onclick="switchTab('email')"><i class="fas fa-envelope"></i> Email Clients</button>
         </div>
 
         <!-- MAIN BODY -->
@@ -1141,6 +1235,120 @@
                 </div>
             </div>
 
+            <!-- ===== ACTIVE SHIPMENTS TAB ===== -->
+            <div class="tab-panel" id="panel-active">
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2><i class="fas fa-globe"></i> Manage Active Shipments</h2>
+                        <p style="color:#8899aa;font-size:13px;margin-top:4px;">These shipments appear on the main website's tracking section for customers to see.</p>
+                    </div>
+                    <div class="panel-body">
+                        <form class="modal-form" id="activeShipmentForm" onsubmit="handleSaveActiveShipment(event)" novalidate>
+                            <input type="hidden" id="activeEditIndex" value="-1">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="activeId">Tracking ID</label>
+                                    <input type="text" id="activeId" placeholder="TOX-2026-001234" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="activeStatus">Status</label>
+                                    <select id="activeStatus" required>
+                                        <option value="Processing">Processing</option>
+                                        <option value="Loading">Loading</option>
+                                        <option value="In Transit">In Transit</option>
+                                        <option value="In Flight">In Flight</option>
+                                        <option value="On Hold">On Hold</option>
+                                        <option value="Delivered">Delivered</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="activeOrigin">Origin City</label>
+                                    <input type="text" id="activeOrigin" placeholder="e.g. Shanghai" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="activeDestination">Destination City</label>
+                                    <input type="text" id="activeDestination" placeholder="e.g. Rotterdam" required>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="activeType">Shipment Type</label>
+                                    <select id="activeType" required>
+                                        <option value="Ocean Freight">Ocean Freight</option>
+                                        <option value="Air Cargo">Air Cargo</option>
+                                        <option value="Ground Transportation">Ground Transportation</option>
+                                        <option value="Express">Express</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="activeWeight">Weight</label>
+                                    <input type="text" id="activeWeight" placeholder="e.g. 2,400 kg" required>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="activeContainers">Containers / Packages</label>
+                                    <input type="text" id="activeContainers" placeholder="e.g. 2x 40HC" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="activeProgress">Progress (%)</label>
+                                    <input type="number" id="activeProgress" min="0" max="100" placeholder="e.g. 65" required>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="activeDeparture">Departure Date</label>
+                                    <input type="date" id="activeDeparture" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="activeEta">ETA Date</label>
+                                    <input type="date" id="activeEta" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="activeLocation">Current Location</label>
+                                <input type="text" id="activeLocation" placeholder="e.g. Suez Canal Area" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Timeline Events <small style="color:#8899aa;">(one per line: time | location | status | completed:yes/no)</small></label>
+                                <textarea id="activeTimeline" rows="4" placeholder="02:15 Feb 1 | Port of Shanghai | Departed | yes&#10;14:30 Feb 15 | Suez Canal | Passed through | yes&#10;12:00 Feb 28 | Port of Rotterdam | Expected Arrival | no"></textarea>
+                            </div>
+                            <div class="modal-actions">
+                                <button type="submit" class="btn-modal-confirm" id="activeSubmitBtn"><i class="fas fa-plus"></i> Add Active Shipment</button>
+                                <button type="button" class="btn-modal-cancel" onclick="resetActiveForm()">Reset</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Active Shipments List -->
+                <div class="panel" style="margin-top:20px;">
+                    <div class="panel-header">
+                        <h2><i class="fas fa-list"></i> Current Active Shipments on Website</h2>
+                        <span class="shipment-count" id="activeCount">0</span>
+                    </div>
+                    <div class="panel-body" style="padding:0; overflow-x:auto;">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Tracking ID</th>
+                                    <th>Route</th>
+                                    <th>Type</th>
+                                    <th>Status</th>
+                                    <th>Progress</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="activeShipmentsTable">
+                                <tr><td colspan="6" class="empty-state"><i class="fas fa-inbox"></i><br>No active shipments</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
             <!-- ===== VISITORS TAB ===== -->
             <div class="tab-panel" id="panel-visitors">
                 <div class="panel">
@@ -1188,6 +1396,95 @@
                 </div>
             </div>
 
+            <!-- ===== EMAIL COMPOSER TAB ===== -->
+            <div class="tab-panel" id="panel-email">
+                <div class="email-composer-layout">
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h2><i class="fas fa-envelope"></i> Professional Email Composer</h2>
+                        </div>
+                        <div class="panel-body">
+                            <form class="modal-form" id="emailForm" onsubmit="sendProfessionalEmail(event)" novalidate>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="emailTo">Recipient Email</label>
+                                        <input type="email" id="emailTo" placeholder="customer@example.com" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="emailSubject">Subject</label>
+                                        <input type="text" id="emailSubject" placeholder="Shipment Update - TOX Express" required>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="emailTemplate">Quick Template</label>
+                                    <select id="emailTemplate" onchange="applyEmailTemplate()">
+                                        <option value="">— Select a template —</option>
+                                        <option value="shipment_created">Shipment Created Confirmation</option>
+                                        <option value="in_transit">Shipment In Transit Update</option>
+                                        <option value="on_hold">Shipment On Hold Notice</option>
+                                        <option value="delivered">Delivery Confirmation</option>
+                                        <option value="delayed">Delay Notification</option>
+                                        <option value="customs">Customs Clearance Update</option>
+                                        <option value="welcome">Welcome New Client</option>
+                                    </select>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="emailShipmentId">Shipment ID (optional)</label>
+                                        <input type="text" id="emailShipmentId" placeholder="TOX-2026-XXXXXX">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="emailClientName">Client Name</label>
+                                        <input type="text" id="emailClientName" placeholder="Client Full Name" required>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="emailBody">Message Body</label>
+                                    <textarea id="emailBody" rows="8" placeholder="Type your message here..." required></textarea>
+                                </div>
+                                <div class="email-actions">
+                                    <button type="button" class="btn-preview" onclick="previewEmail()"><i class="fas fa-eye"></i> Preview</button>
+                                    <button type="submit" class="btn-modal-confirm"><i class="fas fa-paper-plane"></i> Send Email</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Email Preview -->
+                    <div class="panel email-preview-panel" id="emailPreviewPanel" style="display:none;">
+                        <div class="panel-header">
+                            <h2><i class="fas fa-eye"></i> Email Preview</h2>
+                            <button class="action-btn" onclick="document.getElementById('emailPreviewPanel').style.display='none'"><i class="fas fa-times"></i></button>
+                        </div>
+                        <div class="panel-body" style="padding:0;">
+                            <div class="email-preview-frame" id="emailPreviewContent"></div>
+                        </div>
+                    </div>
+
+                    <!-- Sent Emails Log -->
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h2><i class="fas fa-history"></i> Sent Emails</h2>
+                        </div>
+                        <div class="panel-body" style="padding:0; overflow-x:auto;">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>To</th>
+                                        <th>Subject</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sentEmailsTable">
+                                    <tr><td colspan="4" class="empty-state"><i class="fas fa-inbox"></i><br>No emails sent yet</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div><!-- /admin-body -->
     </div><!-- /admin-shell -->
 
@@ -1207,6 +1504,7 @@
                         <option value="Loading">Loading</option>
                         <option value="In Transit">In Transit</option>
                         <option value="In Flight">In Flight</option>
+                        <option value="On Hold">On Hold</option>
                         <option value="Delivered">Delivered</option>
                         <option value="Delayed">Delayed</option>
                     </select>
@@ -1403,6 +1701,7 @@
                     '<td>' + s.eta + '</td>' +
                     '<td>' +
                         '<button class="action-btn" onclick="openStatusModal(\'' + s.id + '\')"><i class="fas fa-exchange-alt"></i></button> ' +
+                        '<button class="action-btn warning" onclick="holdShipment(\'' + s.id + '\')"><i class="fas fa-hand"></i></button> ' +
                         '<button class="action-btn success" onclick="openDeliveryModal(\'' + s.id + '\')"><i class="fas fa-truck"></i></button> ' +
                         '<button class="action-btn danger" onclick="openCancelModal(\'' + s.id + '\')"><i class="fas fa-times"></i></button>' +
                     '</td></tr>';
@@ -1678,6 +1977,343 @@
             t.className = 'toast ' + type;
             t.style.display = 'block';
             setTimeout(() => { t.style.display = 'none'; }, 3500);
+        }
+
+        // ==================== ACTIVE SHIPMENTS MANAGEMENT ====================
+        const ACTIVE_STORAGE_KEY = 'toxActiveShipments';
+
+        function getActiveShipments() {
+            const stored = localStorage.getItem(ACTIVE_STORAGE_KEY);
+            return stored ? JSON.parse(stored) : null;
+        }
+
+        function saveActiveShipments(data) {
+            localStorage.setItem(ACTIVE_STORAGE_KEY, JSON.stringify(data));
+        }
+
+        function loadActiveShipmentDefaults() {
+            return [
+                { id:'TOX-2026-001234', origin:'Shanghai', destination:'Rotterdam', status:'In Transit', type:'Ocean Freight', weight:'2,400 kg', containers:'2x 40HC', eta:'2026-02-28', departure:'2026-02-01', current_location:'Suez Canal Area', progress:65, timeline:[{time:'02:15 Feb 1',location:'Port of Shanghai',status:'Departed',completed:true},{time:'14:30 Feb 15',location:'Suez Canal',status:'Passed through',completed:true},{time:'12:00 Feb 28',location:'Port of Rotterdam',status:'Expected Arrival',completed:false}]},
+                { id:'TOX-2026-005678', origin:'Los Angeles', destination:'Singapore', status:'Processing', type:'Air Cargo', weight:'500 kg', containers:'1x Pallet', eta:'2026-02-25', departure:'2026-02-22', current_location:'LAX Terminal', progress:15, timeline:[{time:'08:00 Feb 22',location:'LAX Cargo Terminal',status:'Received',completed:true},{time:'14:00 Feb 22',location:'Customs Clearance',status:'In Process',completed:false},{time:'18:00 Feb 25',location:'Singapore Changi',status:'Expected',completed:false}]},
+                { id:'TOX-2026-009012', origin:'Dubai', destination:'Miami', status:'Delivered', type:'Ground Transportation', weight:'350 kg', containers:'1x Box', eta:'2026-02-20', departure:'2026-02-18', current_location:'Miami Distribution Center', progress:100, timeline:[{time:'09:30 Feb 18',location:'Dubai Warehouse',status:'Departed',completed:true},{time:'16:45 Feb 19',location:'Dubai Port',status:'Loaded',completed:true},{time:'14:30 Feb 20',location:'Miami DC',status:'Delivered',completed:true}]},
+                { id:'TOX-2026-003456', origin:'Rotterdam', destination:'New York', status:'Loading', type:'Ocean Freight', weight:'18,900 kg', containers:'5x 40HC', eta:'2026-03-05', departure:'2026-02-26', current_location:'Port of Rotterdam', progress:30, timeline:[{time:'06:00 Feb 26',location:'Port of Rotterdam',status:'Loading Started',completed:true},{time:'18:00 Feb 26',location:'Port of Rotterdam',status:'Loading in Progress',completed:false},{time:'08:00 Mar 5',location:'Port of New York',status:'Expected',completed:false}]},
+                { id:'TOX-2026-007890', origin:'Frankfurt', destination:'Tokyo', status:'In Flight', type:'Air Cargo', weight:'1,200 kg', containers:'3x Pallets', eta:'2026-02-24', departure:'2026-02-23', current_location:'Central Asia Airspace', progress:72, timeline:[{time:'14:20 Feb 23',location:'Frankfurt Airport',status:'Departed',completed:true},{time:'09:45 Feb 24',location:'Central Asia',status:'In Flight',completed:false},{time:'18:30 Feb 24',location:'Tokyo Narita',status:'Expected',completed:false}]}
+            ];
+        }
+
+        function renderActiveShipmentsTable() {
+            const data = getActiveShipments() || loadActiveShipmentDefaults();
+            const tbody = document.getElementById('activeShipmentsTable');
+            const countEl = document.getElementById('activeCount');
+            if (!tbody) return;
+            if (countEl) countEl.textContent = data.length;
+
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="empty-state"><i class="fas fa-inbox"></i><br>No active shipments</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = data.map((s, i) => {
+                const badgeClass = s.status === 'Delivered' ? 'badge-delivered' :
+                                   s.status === 'In Transit' || s.status === 'In Flight' ? 'badge-transit' :
+                                   s.status === 'On Hold' ? 'badge-on-hold' : 'badge-pending';
+                return '<tr>' +
+                    '<td><strong>' + s.id + '</strong></td>' +
+                    '<td>' + s.origin + ' → ' + s.destination + '</td>' +
+                    '<td>' + s.type + '</td>' +
+                    '<td><span class="badge ' + badgeClass + '"><i class="fas fa-circle" style="font-size:6px;"></i> ' + s.status + '</span></td>' +
+                    '<td><div style="background:rgba(255,255,255,0.1);border-radius:4px;overflow:hidden;height:8px;width:80px;display:inline-block;vertical-align:middle;"><div style="width:' + s.progress + '%;height:100%;background:#00b4d8;border-radius:4px;"></div></div> ' + s.progress + '%</td>' +
+                    '<td>' +
+                        '<button class="action-btn" onclick="editActiveShipment(' + i + ')" title="Edit"><i class="fas fa-edit"></i></button> ' +
+                        '<button class="action-btn danger" onclick="deleteActiveShipment(' + i + ')" title="Delete"><i class="fas fa-trash"></i></button>' +
+                    '</td></tr>';
+            }).join('');
+        }
+
+        function handleSaveActiveShipment(e) {
+            e.preventDefault();
+            const editIndex = parseInt(document.getElementById('activeEditIndex').value);
+            const shipment = {
+                id: document.getElementById('activeId').value.trim(),
+                origin: document.getElementById('activeOrigin').value.trim(),
+                destination: document.getElementById('activeDestination').value.trim(),
+                status: document.getElementById('activeStatus').value,
+                type: document.getElementById('activeType').value,
+                weight: document.getElementById('activeWeight').value.trim(),
+                containers: document.getElementById('activeContainers').value.trim(),
+                progress: parseInt(document.getElementById('activeProgress').value) || 0,
+                departure: document.getElementById('activeDeparture').value,
+                eta: document.getElementById('activeEta').value,
+                current_location: document.getElementById('activeLocation').value.trim(),
+                timeline: parseTimeline(document.getElementById('activeTimeline').value)
+            };
+
+            if (!shipment.id || !shipment.origin || !shipment.destination || !shipment.weight) {
+                toast('Please fill all required fields', 'error');
+                return;
+            }
+
+            let data = getActiveShipments() || loadActiveShipmentDefaults();
+
+            if (editIndex >= 0) {
+                data[editIndex] = shipment;
+                toast('Shipment ' + shipment.id + ' updated', 'success');
+            } else {
+                // Check for duplicate ID
+                if (data.some(s => s.id === shipment.id)) {
+                    toast('Tracking ID already exists', 'error');
+                    return;
+                }
+                data.push(shipment);
+                toast('Shipment ' + shipment.id + ' added to website', 'success');
+            }
+
+            saveActiveShipments(data);
+            renderActiveShipmentsTable();
+            resetActiveForm();
+        }
+
+        function editActiveShipment(index) {
+            const data = getActiveShipments() || loadActiveShipmentDefaults();
+            const s = data[index];
+            if (!s) return;
+
+            document.getElementById('activeEditIndex').value = index;
+            document.getElementById('activeId').value = s.id;
+            document.getElementById('activeOrigin').value = s.origin;
+            document.getElementById('activeDestination').value = s.destination;
+            document.getElementById('activeStatus').value = s.status;
+            document.getElementById('activeType').value = s.type;
+            document.getElementById('activeWeight').value = s.weight;
+            document.getElementById('activeContainers').value = s.containers;
+            document.getElementById('activeProgress').value = s.progress;
+            document.getElementById('activeDeparture').value = s.departure;
+            document.getElementById('activeEta').value = s.eta;
+            document.getElementById('activeLocation').value = s.current_location;
+
+            // Format timeline back to text
+            if (s.timeline && s.timeline.length > 0) {
+                document.getElementById('activeTimeline').value = s.timeline.map(t =>
+                    t.time + ' | ' + t.location + ' | ' + t.status + ' | ' + (t.completed ? 'yes' : 'no')
+                ).join('\n');
+            }
+
+            document.getElementById('activeSubmitBtn').innerHTML = '<i class="fas fa-save"></i> Update Shipment';
+            switchTab('active');
+            document.getElementById('activeId').focus();
+        }
+
+        function deleteActiveShipment(index) {
+            let data = getActiveShipments() || loadActiveShipmentDefaults();
+            const id = data[index] ? data[index].id : '';
+            if (!confirm('Remove shipment ' + id + ' from the website?')) return;
+            data.splice(index, 1);
+            saveActiveShipments(data);
+            renderActiveShipmentsTable();
+            toast('Shipment removed from website', 'success');
+        }
+
+        function resetActiveForm() {
+            document.getElementById('activeShipmentForm').reset();
+            document.getElementById('activeEditIndex').value = '-1';
+            document.getElementById('activeSubmitBtn').innerHTML = '<i class="fas fa-plus"></i> Add Active Shipment';
+        }
+
+        function parseTimeline(text) {
+            if (!text || !text.trim()) return [];
+            return text.trim().split('\n').map(line => {
+                const parts = line.split('|').map(p => p.trim());
+                return {
+                    time: parts[0] || '',
+                    location: parts[1] || '',
+                    status: parts[2] || '',
+                    completed: (parts[3] || '').toLowerCase() === 'yes'
+                };
+            }).filter(t => t.time && t.location);
+        }
+
+        // Initialize active shipments table on load
+        renderActiveShipmentsTable();
+
+        // ==================== HOLD SHIPMENT ====================
+        async function holdShipment(id) {
+            if (!confirm('Put shipment ' + id + ' on hold?')) return;
+            try {
+                await fetch('/api/admin/shipments/' + id + '/status', {
+                    method: 'POST',
+                    headers: { 'x-admin-token': adminToken, 'x-admin-id': 'admin@toxexpress.com', 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: 'On Hold' })
+                });
+                toast('Shipment ' + id + ' placed on hold', 'warning');
+            } catch(e) {
+                toast('Shipment ' + id + ' placed on hold (local)', 'warning');
+            }
+            loadShipments();
+        }
+
+        // ==================== EMAIL COMPOSER ====================
+        let sentEmails = JSON.parse(localStorage.getItem('toxSentEmails') || '[]');
+        renderSentEmails();
+
+        const emailTemplates = {
+            shipment_created: {
+                subject: 'Shipment Confirmation - TOX Express',
+                body: 'We are pleased to confirm that your shipment has been successfully created and registered in our system.\\n\\nYour cargo is now being prepared for processing at our facility. You will receive tracking updates as your shipment progresses through our network.\\n\\nPlease keep your Shipment ID for future reference and tracking purposes.'
+            },
+            in_transit: {
+                subject: 'Shipment In Transit - TOX Express Update',
+                body: 'Great news! Your shipment is now in transit and making its way to the destination.\\n\\nYou can track your shipment in real-time using our satellite tracking system at toxexpress.org.\\n\\nIf you have any questions about your delivery, our 24/7 support team is ready to assist you.'
+            },
+            on_hold: {
+                subject: 'Shipment On Hold - Action Required',
+                body: 'We are writing to inform you that your shipment has been temporarily placed on hold.\\n\\nThis may be due to pending documentation, customs clearance requirements, or additional verification needed.\\n\\nPlease contact our operations team at your earliest convenience so we can resolve this and get your shipment moving again.'
+            },
+            delivered: {
+                subject: 'Delivery Confirmation - TOX Express',
+                body: 'We are happy to confirm that your shipment has been successfully delivered!\\n\\nThank you for choosing TOX Express for your logistics needs. We value your trust and look forward to serving you again.\\n\\nIf you have any feedback about our service, please do not hesitate to reach out.'
+            },
+            delayed: {
+                subject: 'Shipment Delay Notice - TOX Express',
+                body: 'We regret to inform you that your shipment is experiencing a delay due to unforeseen circumstances.\\n\\nOur team is working diligently to resolve the situation and will provide you with an updated estimated time of arrival as soon as possible.\\n\\nWe sincerely apologize for any inconvenience caused.'
+            },
+            customs: {
+                subject: 'Customs Clearance Update - TOX Express',
+                body: 'Your shipment is currently undergoing customs clearance procedures at the destination port.\\n\\nThis is a standard process and typically takes 1-3 business days. Our customs brokerage team is actively monitoring the process.\\n\\nWe will notify you immediately once clearance is obtained and your shipment is released for final delivery.'
+            },
+            welcome: {
+                subject: 'Welcome to TOX Express - Your Logistics Partner',
+                body: 'Welcome aboard! We are thrilled to have you as part of the TOX Express family.\\n\\nWith our global network spanning 190+ countries, real-time satellite tracking, and dedicated support team, we are committed to delivering excellence with every shipment.\\n\\nFeel free to explore our services and reach out to your dedicated account manager for any assistance.'
+            }
+        };
+
+        function applyEmailTemplate() {
+            const template = document.getElementById('emailTemplate').value;
+            if (!template) return;
+            const t = emailTemplates[template];
+            const shipId = document.getElementById('emailShipmentId').value;
+            document.getElementById('emailSubject').value = t.subject + (shipId ? ' [' + shipId + ']' : '');
+            document.getElementById('emailBody').value = t.body.replace(/\\n/g, '\n');
+        }
+
+        function generateEmailHTML(to, subject, body, clientName, shipmentId) {
+            const bodyHtml = body.replace(/\n/g, '<br>');
+            return '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;padding:0;background:#f4f5f7;font-family:Arial,Helvetica,sans-serif;">' +
+                '<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f5f7;padding:40px 0;">' +
+                '<tr><td align="center">' +
+                '<table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.08);">' +
+                // Header
+                '<tr><td style="background:linear-gradient(135deg,#1D3557 0%,#0d1b2a 100%);padding:32px 40px;text-align:center;">' +
+                '<div style="display:inline-block;background:#E63946;width:50px;height:50px;border-radius:50%;line-height:50px;text-align:center;margin-bottom:12px;">' +
+                '<span style="color:white;font-size:20px;font-weight:bold;">TX</span></div>' +
+                '<h1 style="color:white;font-family:Arial,sans-serif;font-size:22px;font-weight:800;letter-spacing:3px;margin:8px 0 0;">TOX EXPRESS</h1>' +
+                '<p style="color:rgba(255,255,255,0.6);font-size:12px;letter-spacing:1px;margin:4px 0 0;">GLOBAL LOGISTICS &amp; DELIVERY SERVICES</p>' +
+                '</td></tr>' +
+                // Gold accent
+                '<tr><td style="background:linear-gradient(90deg,#E8C84A,#E63946);height:4px;"></td></tr>' +
+                // Body
+                '<tr><td style="padding:40px;">' +
+                '<p style="color:#1D3557;font-size:16px;margin:0 0 20px;">Dear <strong>' + (clientName || 'Valued Client') + '</strong>,</p>' +
+                (shipmentId ? '<div style="background:#f0f4ff;border-left:4px solid #E63946;padding:14px 20px;border-radius:0 8px 8px 0;margin-bottom:24px;">' +
+                '<span style="color:#666;font-size:12px;text-transform:uppercase;letter-spacing:1px;">Shipment Reference</span><br>' +
+                '<strong style="color:#1D3557;font-size:18px;letter-spacing:1px;">' + shipmentId + '</strong></div>' : '') +
+                '<div style="color:#444;font-size:14px;line-height:1.8;">' + bodyHtml + '</div>' +
+                '</td></tr>' +
+                // CTA
+                '<tr><td style="padding:0 40px 32px;text-align:center;">' +
+                '<a href="https://toxexpress.org" style="display:inline-block;background:linear-gradient(135deg,#E63946,#C1121F);color:white;padding:14px 36px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px;letter-spacing:0.5px;">Track Your Shipment</a>' +
+                '</td></tr>' +
+                // Footer
+                '<tr><td style="background:#1D3557;padding:28px 40px;text-align:center;">' +
+                '<p style="color:rgba(255,255,255,0.8);font-size:13px;margin:0 0 8px;">TOX Express Delivery Services</p>' +
+                '<p style="color:rgba(255,255,255,0.5);font-size:11px;margin:0 0 4px;">500 TOX Tower, Marina Boulevard, Singapore 018989</p>' +
+                '<p style="color:rgba(255,255,255,0.5);font-size:11px;margin:0 0 12px;">thetoxexpressdeliveryservices@gmail.com | +1-800-TOX-SHIP</p>' +
+                '<p style="color:rgba(255,255,255,0.3);font-size:10px;margin:0;">&copy; ' + new Date().getFullYear() + ' TOX Express. All rights reserved.</p>' +
+                '</td></tr>' +
+                '</table></td></tr></table></body></html>';
+        }
+
+        function previewEmail() {
+            const to = document.getElementById('emailTo').value;
+            const subject = document.getElementById('emailSubject').value;
+            const body = document.getElementById('emailBody').value;
+            const clientName = document.getElementById('emailClientName').value;
+            const shipmentId = document.getElementById('emailShipmentId').value;
+
+            if (!body) { toast('Please enter a message body', 'error'); return; }
+
+            const html = generateEmailHTML(to, subject, body, clientName, shipmentId);
+            const previewPanel = document.getElementById('emailPreviewPanel');
+            const previewContent = document.getElementById('emailPreviewContent');
+            previewContent.innerHTML = '<iframe id="emailPreviewIframe"></iframe>';
+            const iframe = document.getElementById('emailPreviewIframe');
+            iframe.onload = function() {
+                iframe.contentDocument.open();
+                iframe.contentDocument.write(html);
+                iframe.contentDocument.close();
+            };
+            iframe.src = 'about:blank';
+            previewPanel.style.display = 'block';
+            previewPanel.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function sendProfessionalEmail(e) {
+            e.preventDefault();
+            const to = document.getElementById('emailTo').value;
+            const subject = document.getElementById('emailSubject').value;
+            const body = document.getElementById('emailBody').value;
+            const clientName = document.getElementById('emailClientName').value;
+            const shipmentId = document.getElementById('emailShipmentId').value;
+
+            if (!to || !subject || !body || !clientName) {
+                toast('Please fill all required fields', 'error');
+                return;
+            }
+
+            // Open mailto link with formatted content
+            const mailBody = 'Dear ' + clientName + ',' +
+                '%0D%0A%0D%0A' + encodeURIComponent(body).replace(/%0A/g, '%0D%0A') +
+                (shipmentId ? '%0D%0A%0D%0AShipment Reference: ' + shipmentId : '') +
+                '%0D%0A%0D%0ABest regards,%0D%0ATOX Express Delivery Services%0D%0Athetoxexpressdeliveryservices@gmail.com%0D%0A+1-800-TOX-SHIP%0D%0Ahttps://toxexpress.org';
+
+            const mailtoLink = 'mailto:' + encodeURIComponent(to) + '?subject=' + encodeURIComponent(subject) + '&body=' + mailBody;
+            window.open(mailtoLink, '_blank');
+
+            // Log the sent email
+            const emailRecord = {
+                date: new Date().toLocaleString(),
+                to: to,
+                subject: subject,
+                clientName: clientName,
+                shipmentId: shipmentId || 'N/A',
+                status: 'Sent'
+            };
+            sentEmails.unshift(emailRecord);
+            if (sentEmails.length > 50) sentEmails = sentEmails.slice(0, 50);
+            localStorage.setItem('toxSentEmails', JSON.stringify(sentEmails));
+            renderSentEmails();
+
+            toast('Email composed and opened in mail client', 'success');
+            document.getElementById('emailForm').reset();
+            document.getElementById('emailPreviewPanel').style.display = 'none';
+        }
+
+        function renderSentEmails() {
+            const tbody = document.getElementById('sentEmailsTable');
+            if (!tbody) return;
+            if (sentEmails.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="empty-state"><i class="fas fa-inbox"></i><br>No emails sent yet</td></tr>';
+                return;
+            }
+            let html = '';
+            sentEmails.forEach(e => {
+                html += '<tr>' +
+                    '<td>' + e.date + '</td>' +
+                    '<td>' + e.to + '</td>' +
+                    '<td>' + e.subject + '</td>' +
+                    '<td><span class="badge badge-delivered"><i class="fas fa-circle" style="font-size:6px;"></i> ' + e.status + '</span></td>' +
+                    '</tr>';
+            });
+            tbody.innerHTML = html;
         }
 
         // Close modals on backdrop click
