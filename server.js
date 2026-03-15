@@ -95,6 +95,11 @@ app.use(express.static(__dirname, {
 }));
 app.use(express.json({ limit: '1mb' }));
 
+// Clean URL routes
+app.get('/admin', (req, res) => {
+    res.sendFile(path.join(__dirname, 'admin.html'));
+});
+
 // Block access to sensitive files
 app.use((req, res, next) => {
     var blocked = ['.env', '.git', '.gitignore', 'package-lock.json', 'node_modules'];
