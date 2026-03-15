@@ -675,7 +675,7 @@ function closeCargoModal() {
 }
 
 function downloadShipmentPDF() {
-    showAlert('PDF download feature available in the full version', 'info');
+    showAlert('PDF generation is being prepared. Please try again shortly.', 'info');
 }
 
 function handleTrackingSearch(event) {
@@ -861,6 +861,36 @@ function toggleChat() {
     if (chatWindow) {
         chatWindow.classList.toggle('active');
     }
+}
+
+function sendChatMessage() {
+    var input = document.getElementById('chatInput');
+    var messagesDiv = document.getElementById('chatMessages');
+    if (!input || !messagesDiv) return;
+    var text = input.value.trim();
+    if (!text) return;
+    // User message
+    var userMsg = document.createElement('div');
+    userMsg.className = 'chat-message user';
+    userMsg.innerHTML = '<p>' + text.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</p>';
+    messagesDiv.appendChild(userMsg);
+    input.value = '';
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    // Bot auto-reply
+    setTimeout(function() {
+        var replies = [
+            'Thank you for reaching out! A support agent will be with you shortly.',
+            'We appreciate your message. For urgent inquiries, please call +1-800-TOX-SHIP.',
+            'Thanks for contacting TOX Express! Our team typically responds within minutes.',
+            'Got it! You can also email us at info@toxexpress.org for detailed assistance.',
+            'Thank you! Would you like to track a shipment? Use the tracking section above.'
+        ];
+        var botMsg = document.createElement('div');
+        botMsg.className = 'chat-message bot';
+        botMsg.innerHTML = '<p>' + replies[Math.floor(Math.random() * replies.length)] + '</p>';
+        messagesDiv.appendChild(botMsg);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }, 1000);
 }
 
 
