@@ -572,6 +572,73 @@
 
         .modal-form .form-group { margin-bottom: 1rem; }
 
+        .form-section {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .form-section-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #00b4d8;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            margin-bottom: 16px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(0, 180, 216, 0.15);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-section-title i {
+            font-size: 13px;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 180, 216, 0.1);
+            border-radius: 6px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 6px;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 6px 12px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .checkbox-label:hover {
+            border-color: rgba(0, 180, 216, 0.3);
+            background: rgba(0, 180, 216, 0.05);
+        }
+
+        .checkbox-label input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: #00b4d8;
+        }
+
+        .checkbox-label i { font-size: 12px; color: #00b4d8; }
+
         .modal-form label {
             display: block;
             font-size: 0.82rem;
@@ -794,7 +861,9 @@
             .topbar-status { display: none; }
             .data-table { font-size: 0.8rem; }
             .data-table th, .data-table td { padding: 10px 8px; }
-            .modal-form .form-row { grid-template-columns: 1fr; }
+            .modal-form .form-row { grid-template-columns: 1fr !important; }
+            .checkbox-group { flex-direction: column; }
+            .form-section { padding: 14px; }
         }
 
         @media (max-width: 480px) {
@@ -1170,65 +1239,238 @@
                 <div class="panel">
                     <div class="panel-header">
                         <h2><i class="fas fa-plus-circle"></i> Create New Shipment</h2>
+                        <p style="color:#8899aa;font-size:13px;margin-top:4px;">Fill in all shipment details below. Fields marked <span style="color:#E63946;">*</span> are required.</p>
                     </div>
                     <div class="panel-body">
-                        <form class="modal-form" onsubmit="handleCreateShipment(event)" novalidate>
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="newOrigin">Origin City</label>
-                                    <select id="newOrigin" required>
-                                        <option value="">Select Origin</option>
-                                        <option>Shanghai</option><option>Singapore</option><option>Rotterdam</option><option>Los Angeles</option>
-                                        <option>Dubai</option><option>Hamburg</option><option>Tokyo</option><option>Sydney</option>
-                                        <option>London</option><option>New York</option><option>Mumbai</option><option>Sao Paulo</option>
-                                    </select>
+                        <form class="modal-form" id="createShipmentForm" onsubmit="handleCreateShipment(event)" novalidate>
+
+                            <!-- SECTION 1: CLIENT INFORMATION -->
+                            <div class="form-section">
+                                <div class="form-section-title"><i class="fas fa-user-tie"></i> Client Information</div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="newClientName">Client Full Name <span style="color:#E63946;">*</span></label>
+                                        <input type="text" id="newClientName" placeholder="e.g. John Doe" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="newClientEmail">Client Email <span style="color:#E63946;">*</span></label>
+                                        <input type="email" id="newClientEmail" placeholder="e.g. client@company.com" required>
+                                    </div>
                                 </div>
-                                <div class="form-group">
-                                    <label for="newDestination">Destination City</label>
-                                    <select id="newDestination" required>
-                                        <option value="">Select Destination</option>
-                                        <option>Shanghai</option><option>Singapore</option><option>Rotterdam</option><option>Los Angeles</option>
-                                        <option>Dubai</option><option>Hamburg</option><option>Tokyo</option><option>Sydney</option>
-                                        <option>London</option><option>New York</option><option>Mumbai</option><option>Sao Paulo</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="newType">Shipment Type</label>
-                                    <select id="newType" required>
-                                        <option value="Ocean Freight">Ocean Freight</option>
-                                        <option value="Air Cargo">Air Cargo</option>
-                                        <option value="Ground Transport">Ground Transport</option>
-                                        <option value="Express">Express</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label for="newWeight">Weight (kg)</label>
-                                    <input type="number" id="newWeight" placeholder="e.g. 500" min="0.1" step="0.1" required>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="newClientPhone">Phone Number</label>
+                                        <input type="tel" id="newClientPhone" placeholder="e.g. +1 555 123 4567">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="newClientCompany">Company Name</label>
+                                        <input type="text" id="newClientCompany" placeholder="e.g. Acme Corp">
+                                    </div>
                                 </div>
                             </div>
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="newETA">Estimated Delivery Date</label>
-                                    <input type="date" id="newETA" required>
+
+                            <!-- SECTION 2: ROUTE & SHIPMENT TYPE -->
+                            <div class="form-section">
+                                <div class="form-section-title"><i class="fas fa-route"></i> Route & Shipment Type</div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="newOrigin">Origin City <span style="color:#E63946;">*</span></label>
+                                        <select id="newOrigin" required>
+                                            <option value="">Select Origin</option>
+                                            <option>Shanghai</option><option>Singapore</option><option>Rotterdam</option><option>Los Angeles</option>
+                                            <option>Dubai</option><option>Hamburg</option><option>Tokyo</option><option>Sydney</option>
+                                            <option>London</option><option>New York</option><option>Mumbai</option><option>Sao Paulo</option>
+                                            <option>Hong Kong</option><option>Busan</option><option>Jeddah</option><option>Miami</option>
+                                            <option>Frankfurt</option><option>Johannesburg</option><option>Lagos</option><option>Nairobi</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="newDestination">Destination City <span style="color:#E63946;">*</span></label>
+                                        <select id="newDestination" required>
+                                            <option value="">Select Destination</option>
+                                            <option>Shanghai</option><option>Singapore</option><option>Rotterdam</option><option>Los Angeles</option>
+                                            <option>Dubai</option><option>Hamburg</option><option>Tokyo</option><option>Sydney</option>
+                                            <option>London</option><option>New York</option><option>Mumbai</option><option>Sao Paulo</option>
+                                            <option>Hong Kong</option><option>Busan</option><option>Jeddah</option><option>Miami</option>
+                                            <option>Frankfurt</option><option>Johannesburg</option><option>Lagos</option><option>Nairobi</option>
+                                        </select>
+                                    </div>
                                 </div>
-                                <div class="form-group">
-                                    <label for="newStatus">Initial Status</label>
-                                    <select id="newStatus">
-                                        <option value="Processing">Processing</option>
-                                        <option value="Loading">Loading</option>
-                                        <option value="In Transit">In Transit</option>
-                                    </select>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="newType">Shipment Type <span style="color:#E63946;">*</span></label>
+                                        <select id="newType" required>
+                                            <option value="Ocean Freight">Ocean Freight</option>
+                                            <option value="Air Cargo">Air Cargo</option>
+                                            <option value="Ground Transport">Ground Transport</option>
+                                            <option value="Rail Freight">Rail Freight</option>
+                                            <option value="Express">Express</option>
+                                            <option value="Multimodal">Multimodal</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="newPriority">Priority Level</label>
+                                        <select id="newPriority">
+                                            <option value="Standard">Standard</option>
+                                            <option value="Priority">Priority</option>
+                                            <option value="Express">Express</option>
+                                            <option value="Urgent">Urgent / Same-Day</option>
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="form-group">
-                                <label for="newDescription">Description / Notes</label>
-                                <textarea id="newDescription" placeholder="Package description, special handling instructions..." rows="3"></textarea>
+
+                            <!-- SECTION 3: PACKAGE SIZING & WEIGHT -->
+                            <div class="form-section">
+                                <div class="form-section-title"><i class="fas fa-ruler-combined"></i> Package Sizing & Weight</div>
+                                <div class="form-row" style="grid-template-columns: 1fr 1fr 1fr;">
+                                    <div class="form-group">
+                                        <label for="newLength">Length (cm) <span style="color:#E63946;">*</span></label>
+                                        <input type="number" id="newLength" placeholder="e.g. 120" min="1" step="0.1" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="newWidth">Width (cm) <span style="color:#E63946;">*</span></label>
+                                        <input type="number" id="newWidth" placeholder="e.g. 80" min="1" step="0.1" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="newHeight">Height (cm) <span style="color:#E63946;">*</span></label>
+                                        <input type="number" id="newHeight" placeholder="e.g. 60" min="1" step="0.1" required>
+                                    </div>
+                                </div>
+                                <div class="form-row" style="grid-template-columns: 1fr 1fr 1fr;">
+                                    <div class="form-group">
+                                        <label for="newWeight">Gross Weight (kg) <span style="color:#E63946;">*</span></label>
+                                        <input type="number" id="newWeight" placeholder="e.g. 500" min="0.1" step="0.1" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="newVolumeWeight">Volumetric Weight (kg)</label>
+                                        <input type="number" id="newVolumeWeight" placeholder="Auto-calculated" readonly style="opacity:0.6;">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="newChargeWeight">Chargeable Weight (kg)</label>
+                                        <input type="number" id="newChargeWeight" placeholder="Auto-calculated" readonly style="opacity:0.6;">
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="newPieces">Number of Pieces <span style="color:#E63946;">*</span></label>
+                                        <input type="number" id="newPieces" placeholder="e.g. 3" min="1" value="1" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="newPackaging">Packaging Type</label>
+                                        <select id="newPackaging">
+                                            <option value="Box">Box / Carton</option>
+                                            <option value="Pallet">Pallet</option>
+                                            <option value="Crate">Wooden Crate</option>
+                                            <option value="Drum">Drum / Barrel</option>
+                                            <option value="Container 20ft">Container 20ft</option>
+                                            <option value="Container 40ft">Container 40ft</option>
+                                            <option value="Container 40HC">Container 40ft HC</option>
+                                            <option value="Envelope">Envelope / Document</option>
+                                            <option value="Tube">Tube</option>
+                                            <option value="Loose">Loose / Unpacked</option>
+                                        </select>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="modal-actions">
-                                <button type="submit" class="btn-modal-confirm"><i class="fas fa-plus"></i> Create Shipment</button>
-                                <button type="button" class="btn-modal-cancel" onclick="this.closest('form').reset()">Reset</button>
+
+                            <!-- SECTION 4: CARGO DETAILS -->
+                            <div class="form-section">
+                                <div class="form-section-title"><i class="fas fa-boxes-stacked"></i> Cargo Details</div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="newCargoDescription">Cargo Description <span style="color:#E63946;">*</span></label>
+                                        <input type="text" id="newCargoDescription" placeholder="e.g. Electronics, Auto Parts, Textiles" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="newHSCode">HS Code / Commodity Code</label>
+                                        <input type="text" id="newHSCode" placeholder="e.g. 8471.30">
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="newDeclaredValue">Declared Value (USD) <span style="color:#E63946;">*</span></label>
+                                        <input type="number" id="newDeclaredValue" placeholder="e.g. 25000" min="0" step="0.01" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="newInsurance">Insurance</label>
+                                        <select id="newInsurance">
+                                            <option value="None">No Insurance</option>
+                                            <option value="Basic">Basic Coverage (up to $10,000)</option>
+                                            <option value="Standard">Standard Coverage (up to $50,000)</option>
+                                            <option value="Premium">Premium Coverage (Full Value)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Special Cargo Flags</label>
+                                        <div class="checkbox-group">
+                                            <label class="checkbox-label"><input type="checkbox" id="newHazardous"> <i class="fas fa-radiation"></i> Hazardous / DG</label>
+                                            <label class="checkbox-label"><input type="checkbox" id="newFragile"> <i class="fas fa-wine-glass-crack"></i> Fragile</label>
+                                            <label class="checkbox-label"><input type="checkbox" id="newPerishable"> <i class="fas fa-snowflake"></i> Perishable</label>
+                                            <label class="checkbox-label"><input type="checkbox" id="newOversized"> <i class="fas fa-up-right-and-down-left-from-center"></i> Oversized</label>
+                                            <label class="checkbox-label"><input type="checkbox" id="newHighValue"> <i class="fas fa-gem"></i> High Value</label>
+                                            <label class="checkbox-label"><input type="checkbox" id="newLiveAnimals"> <i class="fas fa-paw"></i> Live Animals</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- SECTION 5: SCHEDULE & DATES -->
+                            <div class="form-section">
+                                <div class="form-section-title"><i class="fas fa-calendar-alt"></i> Schedule & Dates</div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="newPickupDate">Pickup / Collection Date <span style="color:#E63946;">*</span></label>
+                                        <input type="date" id="newPickupDate" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="newETA">Estimated Delivery Date <span style="color:#E63946;">*</span></label>
+                                        <input type="date" id="newETA" required>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="newStatus">Initial Status</label>
+                                        <select id="newStatus">
+                                            <option value="Processing">Processing</option>
+                                            <option value="Loading">Loading</option>
+                                            <option value="In Transit">In Transit</option>
+                                            <option value="In Flight">In Flight</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="newIncoterms">Incoterms</label>
+                                        <select id="newIncoterms">
+                                            <option value="EXW">EXW - Ex Works</option>
+                                            <option value="FOB" selected>FOB - Free on Board</option>
+                                            <option value="CIF">CIF - Cost, Insurance & Freight</option>
+                                            <option value="DDP">DDP - Delivered Duty Paid</option>
+                                            <option value="DAP">DAP - Delivered at Place</option>
+                                            <option value="FCA">FCA - Free Carrier</option>
+                                            <option value="CFR">CFR - Cost & Freight</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- SECTION 6: SPECIAL INSTRUCTIONS -->
+                            <div class="form-section">
+                                <div class="form-section-title"><i class="fas fa-clipboard-list"></i> Special Instructions</div>
+                                <div class="form-group">
+                                    <label for="newHandling">Handling Instructions</label>
+                                    <textarea id="newHandling" placeholder="e.g. Keep upright, temperature controlled (2-8°C), do not stack above 3 layers..." rows="3"></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label for="newDescription">Additional Notes / Remarks</label>
+                                    <textarea id="newDescription" placeholder="Any extra information, customs notes, delivery window preferences..." rows="2"></textarea>
+                                </div>
+                            </div>
+
+                            <div class="modal-actions" style="margin-top:24px;">
+                                <button type="submit" class="btn-modal-confirm" style="padding:14px 36px;font-size:15px;"><i class="fas fa-plus"></i> Create Shipment</button>
+                                <button type="button" class="btn-modal-cancel" onclick="this.closest('form').reset(); calcVolWeight();">Reset Form</button>
                             </div>
                         </form>
                     </div>
@@ -1927,6 +2169,31 @@
             document.getElementById('backdateHistory').innerHTML = html || '<tr><td colspan="6" class="empty-state">No backdate records yet</td></tr>';
         }
 
+        // ==================== VOLUMETRIC WEIGHT CALCULATOR ====================
+        function calcVolWeight() {
+            const l = parseFloat(document.getElementById('newLength').value) || 0;
+            const w = parseFloat(document.getElementById('newWidth').value) || 0;
+            const h = parseFloat(document.getElementById('newHeight').value) || 0;
+            const gross = parseFloat(document.getElementById('newWeight').value) || 0;
+            const type = document.getElementById('newType').value;
+
+            // Divisor: 5000 for air, 6000 for ocean/ground
+            const divisor = (type === 'Air Cargo' || type === 'Express') ? 5000 : 6000;
+            const vol = (l * w * h) / divisor;
+            const volRound = Math.round(vol * 100) / 100;
+            const charge = Math.max(gross, volRound);
+
+            document.getElementById('newVolumeWeight').value = l && w && h ? volRound : '';
+            document.getElementById('newChargeWeight').value = l && w && h && gross ? Math.round(charge * 100) / 100 : '';
+        }
+
+        // Attach auto-calc listeners
+        ['newLength','newWidth','newHeight','newWeight','newType'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('input', calcVolWeight);
+            if (el) el.addEventListener('change', calcVolWeight);
+        });
+
         // ==================== CREATE SHIPMENT ====================
         async function handleCreateShipment(e) {
             e.preventDefault();
@@ -1937,8 +2204,36 @@
             const eta = document.getElementById('newETA').value;
             const status = document.getElementById('newStatus').value;
             const description = document.getElementById('newDescription').value;
+            const clientName = document.getElementById('newClientName').value.trim();
+            const clientEmail = document.getElementById('newClientEmail').value.trim();
+            const clientPhone = document.getElementById('newClientPhone').value.trim();
+            const clientCompany = document.getElementById('newClientCompany').value.trim();
+            const length = document.getElementById('newLength').value;
+            const width = document.getElementById('newWidth').value;
+            const height = document.getElementById('newHeight').value;
+            const pieces = document.getElementById('newPieces').value;
+            const packaging = document.getElementById('newPackaging').value;
+            const cargoDescription = document.getElementById('newCargoDescription').value.trim();
+            const hsCode = document.getElementById('newHSCode').value.trim();
+            const declaredValue = document.getElementById('newDeclaredValue').value;
+            const insurance = document.getElementById('newInsurance').value;
+            const priority = document.getElementById('newPriority').value;
+            const pickupDate = document.getElementById('newPickupDate').value;
+            const incoterms = document.getElementById('newIncoterms').value;
+            const handling = document.getElementById('newHandling').value.trim();
+            const volWeight = document.getElementById('newVolumeWeight').value;
+            const chargeWeight = document.getElementById('newChargeWeight').value;
 
-            if (!origin || !destination || !weight || !eta) {
+            // Collect special flags
+            const flags = [];
+            if (document.getElementById('newHazardous').checked) flags.push('Hazardous');
+            if (document.getElementById('newFragile').checked) flags.push('Fragile');
+            if (document.getElementById('newPerishable').checked) flags.push('Perishable');
+            if (document.getElementById('newOversized').checked) flags.push('Oversized');
+            if (document.getElementById('newHighValue').checked) flags.push('High Value');
+            if (document.getElementById('newLiveAnimals').checked) flags.push('Live Animals');
+
+            if (!clientName || !clientEmail || !origin || !destination || !weight || !eta || !length || !width || !height || !cargoDescription || !declaredValue || !pickupDate) {
                 toast('Please fill all required fields', 'error');
                 return;
             }
@@ -1948,20 +2243,34 @@
                 return;
             }
 
-            const shipmentId = 'TOX-2026-' + String(Math.floor(Math.random() * 900000) + 100000);
+            const shipmentId = 'TOX-' + new Date().getFullYear() + '-' + String(Math.floor(Math.random() * 900000) + 100000);
+
+            const shipmentData = {
+                id: shipmentId, origin, destination, type, status, eta, description, priority, incoterms,
+                client: { name: clientName, email: clientEmail, phone: clientPhone, company: clientCompany },
+                dimensions: { length: parseFloat(length), width: parseFloat(width), height: parseFloat(height) },
+                weight: parseFloat(weight),
+                volumetricWeight: parseFloat(volWeight) || 0,
+                chargeableWeight: parseFloat(chargeWeight) || 0,
+                pieces: parseInt(pieces) || 1,
+                packaging,
+                cargo: { description: cargoDescription, hsCode, declaredValue: parseFloat(declaredValue), insurance, flags },
+                pickupDate, handling
+            };
 
             try {
                 await fetch('/api/admin/shipments', {
                     method: 'POST',
                     headers: { 'x-admin-token': adminToken, 'x-admin-id': 'admin@toxexpress.com', 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id: shipmentId, origin, destination, type, weight: parseFloat(weight), eta, status, description })
+                    body: JSON.stringify(shipmentData)
                 });
-                toast('Shipment ' + shipmentId + ' created', 'success');
+                toast('Shipment ' + shipmentId + ' created successfully', 'success');
             } catch(e) {
                 toast('Shipment ' + shipmentId + ' created (local)', 'success');
             }
 
             e.target.reset();
+            calcVolWeight();
             switchTab('shipments');
             loadShipments();
         }
