@@ -959,47 +959,148 @@
     </section>
 
     <!-- CONTACT SECTION -->
-    <section class="contact-section" id="contact">
+    <section class="contact" id="contact">
         <div class="container">
             <div class="section-header">
-                <h2 class="section-title">Contact TOX Express</h2>
-                <p class="section-subtitle">Get in touch with our global logistics team</p>
+                <h2 class="section-title" style="color:white;">Contact TOX Express</h2>
+                <p class="section-subtitle" style="color:rgba(255,255,255,0.55);">Reach our global logistics team — we respond within 2 hours</p>
             </div>
-            <div class="contact-grid">
-                <div class="contact-info">
-                    <h3>Get In Touch</h3>
-                    <p>Our team is available 24/7 to assist with your logistics needs.</p>
-                    <div class="info-items">
-                        <div class="info-item"><i class="fas fa-phone"></i><div><h5>Phone</h5><p>+1-800-TOX-SHIP</p></div></div>
-                        <div class="info-item"><i class="fas fa-envelope"></i><div><h5>Email</h5><p>thetoxexpressdeliveryservices@gmail.com</p></div></div>
-                        <div class="info-item"><i class="fas fa-location-dot"></i><div><h5>Headquarters</h5><p>500 TOX Tower, Marina Boulevard, Singapore 018989</p></div></div>
-                        <div class="info-item"><i class="fas fa-clock"></i><div><h5>Operating Hours</h5><p>24/7 Global Operations Center</p></div></div>
-                    </div>
+
+            <!-- Contact Cards Row -->
+            <div class="contact-cards-row">
+                <div class="contact-card">
+                    <div class="contact-icon"><i class="fas fa-phone-volume"></i></div>
+                    <h4>Call Us</h4>
+                    <p>+1-800-TOX-SHIP</p>
+                    <span class="contact-badge"><i class="fas fa-circle" style="color:#22c55e;font-size:0.5rem;"></i> Available 24/7</span>
                 </div>
-                <div class="contact-form-wrap">
+                <div class="contact-card">
+                    <div class="contact-icon"><i class="fas fa-envelope-open-text"></i></div>
+                    <h4>Email Us</h4>
+                    <p>thetoxexpressdeliveryservices@gmail.com</p>
+                    <span class="contact-badge"><i class="fas fa-bolt"></i> Avg. reply: 2 hrs</span>
+                </div>
+                <div class="contact-card">
+                    <div class="contact-icon"><i class="fas fa-building"></i></div>
+                    <h4>Headquarters</h4>
+                    <p>500 TOX Tower, Marina Blvd, Singapore 018989</p>
+                    <span class="contact-badge"><i class="fas fa-earth-asia"></i> Asia-Pacific HQ</span>
+                </div>
+                <div class="contact-card">
+                    <div class="contact-icon"><i class="fas fa-headset"></i></div>
+                    <h4>Live Support</h4>
+                    <p>Chat with our logistics advisors in real time</p>
+                    <span class="contact-badge"><i class="fas fa-comments"></i> Use chat widget</span>
+                </div>
+            </div>
+
+            <!-- Form + Info Grid -->
+            <div class="contact-grid">
+                <div class="contact-form">
+                    <div class="contact-form-header">
+                        <h3><i class="fas fa-paper-plane"></i> Send Us a Message</h3>
+                        <p>Fill out the form and our team will get back to you promptly.</p>
+                    </div>
                     <form id="contactForm" onsubmit="handleContactForm(event)" novalidate>
                         <div class="form-row">
-                            <div class="form-group"><label for="contactName">Full Name</label><input type="text" id="contactName" placeholder="Your Full Name" required></div>
-                            <div class="form-group"><label for="contactEmail">Email Address</label><input type="email" id="contactEmail" placeholder="your@email.com" required></div>
+                            <div class="form-group">
+                                <label class="form-label">Full Name <span>*</span></label>
+                                <input type="text" id="contactName" placeholder="John Doe" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Email Address <span>*</span></label>
+                                <input type="email" id="contactEmail" placeholder="john@company.com" required>
+                            </div>
                         </div>
                         <div class="form-row">
-                            <div class="form-group"><label for="contactCompany">Company</label><input type="text" id="contactCompany" placeholder="Company Name"></div>
                             <div class="form-group">
-                                <label for="serviceType">Service Required</label>
+                                <label class="form-label">Company</label>
+                                <input type="text" id="contactCompany" placeholder="Company Name">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Phone Number</label>
+                                <input type="tel" id="contactPhone" placeholder="+1 (555) 000-0000">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Service Required</label>
                                 <select id="serviceType">
                                     <option value="">Select Service</option>
                                     <option value="ocean">Ocean Freight</option>
                                     <option value="air">Air Cargo</option>
                                     <option value="ground">Ground Transport</option>
-                                    <option value="warehouse">Warehousing</option>
+                                    <option value="warehouse">Warehousing & Distribution</option>
                                     <option value="customs">Customs Clearance</option>
                                     <option value="tracking">Tracking Solution</option>
+                                    <option value="project">Project Cargo</option>
+                                    <option value="other">Other / General Inquiry</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Urgency</label>
+                                <select id="contactUrgency">
+                                    <option value="normal">Normal</option>
+                                    <option value="high">High Priority</option>
+                                    <option value="urgent">Urgent — Need Response Today</option>
                                 </select>
                             </div>
                         </div>
-                        <div class="form-group"><label for="contactMessage">Message</label><textarea id="contactMessage" rows="5" placeholder="Tell us about your logistics needs..." required></textarea></div>
-                        <button type="submit" class="btn-primary btn-full"><i class="fas fa-paper-plane"></i> Send Message</button>
+                        <div class="form-group">
+                            <label class="form-label">Message <span>*</span></label>
+                            <textarea id="contactMessage" rows="5" placeholder="Describe your logistics requirements, shipment details, or questions..." required></textarea>
+                        </div>
+                        <div class="contact-form-footer">
+                            <button type="submit" class="btn-primary-large btn-full"><i class="fas fa-paper-plane"></i> Send Message</button>
+                            <p class="form-disclaimer"><i class="fas fa-lock"></i> Your information is secure and will never be shared with third parties.</p>
+                        </div>
                     </form>
+                </div>
+                <div class="contact-side">
+                    <div class="contact-side-block">
+                        <h4><i class="fas fa-globe"></i> Regional Offices</h4>
+                        <div class="office-list">
+                            <div class="office-item">
+                                <strong>North America</strong>
+                                <p>1200 Avenue of the Americas, New York, NY 10036</p>
+                            </div>
+                            <div class="office-item">
+                                <strong>Europe</strong>
+                                <p>Europaweg 12, 3199 LC Rotterdam, Netherlands</p>
+                            </div>
+                            <div class="office-item">
+                                <strong>Middle East</strong>
+                                <p>Business Bay, Dubai, UAE — Tower 3, Floor 18</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="contact-side-block">
+                        <h4><i class="fas fa-clock-rotate-left"></i> Response SLA</h4>
+                        <div class="sla-grid">
+                            <div class="sla-item">
+                                <span class="sla-time">2 hrs</span>
+                                <span class="sla-label">Email Response</span>
+                            </div>
+                            <div class="sla-item">
+                                <span class="sla-time">30 min</span>
+                                <span class="sla-label">Live Chat</span>
+                            </div>
+                            <div class="sla-item">
+                                <span class="sla-time">Instant</span>
+                                <span class="sla-label">Phone Support</span>
+                            </div>
+                            <div class="sla-item">
+                                <span class="sla-time">24 hrs</span>
+                                <span class="sla-label">Custom Quotes</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="contact-side-block contact-cta-block">
+                        <i class="fas fa-truck-fast"></i>
+                        <h4>Need Immediate Assistance?</h4>
+                        <p>For urgent shipments or time-critical cargo, call our priority line directly.</p>
+                        <a href="tel:+18008697447" class="btn-primary"><i class="fas fa-phone"></i> Call Priority Line</a>
+                    </div>
                 </div>
             </div>
         </div>
