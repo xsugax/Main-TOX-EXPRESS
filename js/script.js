@@ -499,23 +499,34 @@ function addDemoShipmentRoutes() {
 
 
 // ==========================================
-// TRACKING SEARCH (redirects to tracking page)
+// TRACKING SEARCH (inline results on homepage)
 // ==========================================
+
+function escHtml(str) {
+    if (!str) return '';
+    var d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+}
 
 function handleTrackingSearch(event) {
     event.preventDefault();
     var input = document.getElementById('trackingNumber');
     var trackingNumber = input.value.trim().toUpperCase();
     var errorDiv = document.getElementById('searchError');
+    var resultDiv = document.getElementById('homeTrackingResult');
+    var detailsDiv = document.getElementById('homeShipmentDetails');
 
     if (!trackingNumber) {
         showError(errorDiv, 'Please enter a tracking number');
+        if (resultDiv) resultDiv.style.display = 'none';
         return;
     }
 
     // Accept both old format (TOX-2026-001234) and new format (TOX-SEA-SHRO-260315-849271-K7)
     if (!/^TOX-[A-Z0-9-]{5,40}$/.test(trackingNumber)) {
         showError(errorDiv, 'Invalid format. Use: TOX-AIR-LASI-260325-123456-A1');
+        if (resultDiv) resultDiv.style.display = 'none';
         return;
     }
 
@@ -523,8 +534,122 @@ function handleTrackingSearch(event) {
     FormDataManager.saveTrackingHistory(trackingNumber);
     showTrackingHistory();
 
-    // Redirect to tracking page with the tracking number
-    window.location.href = 'tracking.html?id=' + encodeURIComponent(trackingNumber);
+    // Show loading state
+    if (resultDiv && detailsDiv) {
+        resultDiv.style.display = 'block';
+        detailsDiv.innerHTML = '<div style="text-align:center;padding:40px 20px;color:#64748b;"><i class="fas fa-spinner fa-spin" style="font-size:2rem;color:var(--tox-red);"></i><p style="margin-top:12px;font-weight:600;">Looking up shipment <strong>' + escHtml(trackingNumber) + '</strong>...</p></div>';
+    }
+
+    // Fetch from tracking API
+    fetch('/api/track/' + encodeURIComponent(trackingNumber))
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            if (data.error) {
+                detailsDiv.innerHTML = renderHomeNotFound(trackingNumber);
+                var link = document.getElementById('fullTrackingLink');
+                if (link) link.style.display = 'none';
+                return;
+            }
+            detailsDiv.innerHTML = renderHomeTrackingResult(data);
+            var link = document.getElementById('fullTrackingLink');
+            if (link) {
+                link.href = 'tracking.html?id=' + encodeURIComponent(trackingNumber);
+                link.style.display = 'inline-block';
+            }
+            // Smooth scroll to result
+            resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        })
+        .catch(function() {
+            detailsDiv.innerHTML = '<div style="text-align:center;padding:30px 20px;color:#ef4444;"><i class="fas fa-wifi" style="font-size:1.5rem;"></i><p style="margin-top:8px;font-weight:600;">Unable to connect to tracking server. Please try again later.</p></div>';
+        });
+}
+
+function renderHomeNotFound(id) {
+    return '<div style="text-align:center;padding:30px 20px;">' +
+        '<div style="font-size:3rem;color:#94a3b8;margin-bottom:12px;"><i class="fas fa-search"></i></div>' +
+        '<h3 style="color:var(--tox-navy);margin-bottom:8px;">Shipment Not Found</h3>' +
+        '<p style="color:#64748b;">No shipment matching <strong>' + escHtml(id) + '</strong> was found in our system.</p>' +
+        '<div style="text-align:left;max-width:360px;margin:16px auto 0;background:#f8fafc;padding:16px;border-radius:10px;font-size:0.9rem;color:#64748b;">' +
+        '<p style="font-weight:700;color:var(--tox-navy);margin-bottom:8px;">Tips:</p>' +
+        '<ul style="margin:0;padding-left:18px;">' +
+        '<li>Check the tracking number for typos</li>' +
+        '<li>Tracking numbers start with <strong>TOX-</strong></li>' +
+        '<li>New shipments may take a few minutes to appear</li>' +
+        '</ul></div></div>';
+}
+
+function renderHomeTrackingResult(s) {
+    var statusColors = {
+        'Processing': '#f59e0b', 'Loading': '#f59e0b', 'In Transit': '#3b82f6',
+        'In Flight': '#3b82f6', 'Customs Clearance': '#8b5cf6', 'Out for Delivery': '#0ea5e9',
+        'Delivered': '#22c55e', 'On Hold': '#ef4444', 'Delayed': '#ef4444', 'Cancelled': '#6b7280'
+    };
+    var statusIcons = {
+        'Processing': 'fa-cog', 'Loading': 'fa-truck-loading', 'In Transit': 'fa-ship',
+        'In Flight': 'fa-plane', 'Customs Clearance': 'fa-passport', 'Out for Delivery': 'fa-truck',
+        'Delivered': 'fa-check-circle', 'On Hold': 'fa-pause-circle', 'Delayed': 'fa-exclamation-triangle', 'Cancelled': 'fa-times-circle'
+    };
+
+    var color = statusColors[s.status] || '#3b82f6';
+    var icon = statusIcons[s.status] || 'fa-box';
+    var progress = s.progress || 0;
+
+    var html = '<div class="track-card">';
+
+    // Status Header
+    html += '<div class="track-status-header" style="background:linear-gradient(135deg,' + color + '22,' + color + '08);border-left:4px solid ' + color + ';">' +
+        '<div class="track-status-icon" style="color:' + color + ';"><i class="fas ' + icon + '"></i></div>' +
+        '<div class="track-status-info">' +
+        '<div class="track-status-label" style="color:' + color + ';">' + escHtml(s.status) + '</div>' +
+        '<div class="track-id">' + escHtml(s.id) + '</div>' +
+        '</div></div>';
+
+    // Progress Bar
+    html += '<div class="track-progress-wrap">' +
+        '<div class="track-progress-bar"><div class="track-progress-fill" style="width:' + progress + '%;background:' + color + ';"></div></div>' +
+        '<div class="track-progress-pct">' + progress + '% Complete</div></div>';
+
+    // Route
+    html += '<div class="track-route">' +
+        '<div class="track-route-point"><div class="track-route-dot origin"></div><div class="track-route-label">Origin</div><div class="track-route-city">' + escHtml(s.origin) + '</div></div>' +
+        '<div class="track-route-line"><i class="fas fa-plane"></i></div>' +
+        '<div class="track-route-point"><div class="track-route-dot dest"></div><div class="track-route-label">Destination</div><div class="track-route-city">' + escHtml(s.destination) + '</div></div>' +
+        '</div>';
+
+    // Delivery Address
+    if (s.deliveryAddress) {
+        html += '<div style="background:rgba(29,53,87,0.04);border-radius:10px;padding:14px 18px;margin:0 24px 18px;border-left:3px solid #1D3557;">' +
+            '<div style="font-size:12px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;"><i class="fas fa-map-marker-alt" style="color:#E63946;"></i> Delivery Address</div>' +
+            '<div style="font-size:14px;color:#1D3557;font-weight:500;">' + escHtml(s.deliveryAddress) + '</div></div>';
+    }
+
+    // Details Grid
+    html += '<div class="track-details-grid">';
+    if (s.type) html += '<div class="track-detail"><div class="track-detail-label">Service Type</div><div class="track-detail-value">' + escHtml(s.type) + '</div></div>';
+    if (s.eta) html += '<div class="track-detail"><div class="track-detail-label">Estimated Arrival</div><div class="track-detail-value">' + escHtml(s.eta) + '</div></div>';
+    if (s.current_location) html += '<div class="track-detail"><div class="track-detail-label">Current Location</div><div class="track-detail-value"><i class="fas fa-map-marker-alt" style="color:#E63946;"></i> ' + escHtml(s.current_location) + '</div></div>';
+    if (s.weight) html += '<div class="track-detail"><div class="track-detail-label">Weight</div><div class="track-detail-value">' + escHtml(String(s.weight)) + ' kg</div></div>';
+    html += '</div>';
+
+    // Timeline (show last 3 events)
+    if (s.timeline && s.timeline.length > 0) {
+        var recentTimeline = s.timeline.slice(-3);
+        html += '<div class="track-timeline"><h4><i class="fas fa-history"></i> Recent Updates</h4>';
+        recentTimeline.forEach(function(t) {
+            var completed = t.completed !== false;
+            html += '<div class="track-timeline-item ' + (completed ? 'completed' : 'pending') + '">' +
+                '<div class="track-timeline-dot" style="background:' + (completed ? color : '#cbd5e1') + ';"></div>' +
+                '<div class="track-timeline-content">' +
+                '<div class="track-timeline-time">' + escHtml(t.time || t.date || '') + '</div>' +
+                '<div class="track-timeline-event">' + escHtml(t.status || t.event || '') + '</div>' +
+                '<div class="track-timeline-location"><i class="fas fa-map-pin"></i> ' + escHtml(t.location || '') + '</div>' +
+                '</div></div>';
+        });
+        html += '</div>';
+    }
+
+    html += '</div>';
+    return html;
 }
 
 
@@ -664,56 +789,8 @@ function showAlert(message, type) {
 
 
 // ==========================================
-// TIDIO & CHAT
+// SMARTSUPP CHAT (replaces old custom chat)
 // ==========================================
-
-function initializeTidio() {
-    if (typeof tidioChatApi !== 'undefined') {
-        tidioChatApi.on('ready', function() {
-            tidioChatApi.setCustomData({
-                company: 'TOX Express Delivery Services',
-                support_team: 'Available 24/7'
-            });
-        });
-    }
-}
-
-function toggleChat() {
-    var chatWindow = document.getElementById('chatWindow');
-    if (chatWindow) {
-        chatWindow.classList.toggle('active');
-    }
-}
-
-function sendChatMessage() {
-    var input = document.getElementById('chatInput');
-    var messagesDiv = document.getElementById('chatMessages');
-    if (!input || !messagesDiv) return;
-    var text = input.value.trim();
-    if (!text) return;
-    // User message
-    var userMsg = document.createElement('div');
-    userMsg.className = 'chat-message user';
-    userMsg.innerHTML = '<p>' + text.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</p>';
-    messagesDiv.appendChild(userMsg);
-    input.value = '';
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    // Bot auto-reply
-    setTimeout(function() {
-        var replies = [
-            'Thank you for reaching out! A support agent will be with you shortly.',
-            'We appreciate your message. For urgent inquiries, please call +1-800-TOX-SHIP.',
-            'Thanks for contacting TOX Express! Our team typically responds within minutes.',
-            'Got it! You can also email us at info@toxexpress.org for detailed assistance.',
-            'Thank you! Would you like to track a shipment? Use the tracking section above.'
-        ];
-        var botMsg = document.createElement('div');
-        botMsg.className = 'chat-message bot';
-        botMsg.innerHTML = '<p>' + replies[Math.floor(Math.random() * replies.length)] + '</p>';
-        messagesDiv.appendChild(botMsg);
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    }, 1000);
-}
 
 
 // ==========================================
@@ -785,14 +862,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // 10. Tidio / fallback chat
-    initializeTidio();
-    setTimeout(function() {
-        if (typeof tidioChatApi === 'undefined') {
-            var chatWidget = document.getElementById('chatWidget');
-            if (chatWidget) chatWidget.style.display = 'block';
-        }
-    }, 3500);
+    // 10. Smartsupp chat (loaded via external script)
 
     // 13. Form auto-save on change (debounced)
     var contactForm = document.querySelector('.contact-form');

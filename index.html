@@ -6,7 +6,7 @@
     <meta http-equiv="X-Content-Type-Options" content="nosniff">
     <meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
     <meta name="referrer" content="strict-origin-when-cross-origin">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://translate.google.com https://translate.googleapis.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com https://translate.googleapis.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: https://images.pexels.com https://*.tile.openstreetmap.org https://server.arcgisonline.com https://*.tile.opentopomap.org https://translate.google.com https://www.google.com https://translate.googleapis.com; media-src 'self' https://videos.pexels.com; connect-src 'self' https://translate.googleapis.com; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://translate.google.com https://translate.googleapis.com https://cdn.jsdelivr.net https://www.smartsuppchat.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com https://translate.googleapis.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: https://images.pexels.com https://*.tile.openstreetmap.org https://server.arcgisonline.com https://*.tile.opentopomap.org https://translate.google.com https://www.google.com https://translate.googleapis.com https://www.smartsuppchat.com; media-src 'self' https://videos.pexels.com; connect-src 'self' https://translate.googleapis.com https://www.smartsuppchat.com https://*.smartsuppchat.com; frame-src https://www.smartsuppchat.com; object-src 'none'; base-uri 'self'; form-action 'self';">
     <title>TOX Express Delivery Services - Premium Cargo &amp; Shipping Solutions</title>
     <meta name="description" content="TOX Express Delivery Services - Global logistics, real-time satellite tracking, premium shipping worldwide.">
     <link rel="canonical" href="https://toxexpress.org/">
@@ -600,6 +600,13 @@
                     <p class="recent-title">Recent Searches:</p>
                     <div id="recentSearchesList" class="recent-list"></div>
                     <button type="button" class="btn-secondary" style="width: 100%; margin-top: 0.5rem;" onclick="clearTrackingHistory()">Clear History</button>
+                </div>
+            </div>
+            <!-- Inline Tracking Result -->
+            <div id="homeTrackingResult" style="display:none; margin-top: 2rem;">
+                <div id="homeShipmentDetails"></div>
+                <div style="text-align:center; margin-top: 1rem;">
+                    <a id="fullTrackingLink" href="tracking.html" class="btn-secondary" style="display:none;"><i class="fas fa-external-link-alt"></i> View Full Tracking Page</a>
                 </div>
             </div>
             <div class="tracking-map-container">
@@ -1307,27 +1314,18 @@
         </div>
     </footer>
 
-    <!-- CHAT WIDGET -->
-    <div class="chat-widget" id="chatWidget">
-        <button class="chat-toggle" onclick="toggleChat()" aria-label="Open chat support">
-            <i class="fas fa-comments"></i>
-        </button>
-        <div class="chat-window" id="chatWindow">
-            <div class="chat-header">
-                <h4><i class="fas fa-headset"></i> TOX Express Support</h4>
-                <button onclick="toggleChat()" aria-label="Close chat">&times;</button>
-            </div>
-            <div class="chat-messages" id="chatMessages">
-                <div class="chat-message bot">
-                    <p>Welcome to TOX Express! How can we assist you today?</p>
-                </div>
-            </div>
-            <div class="chat-input-wrap">
-                <input type="text" id="chatInput" placeholder="Type your message..." onkeypress="if(event.key==='Enter')sendChatMessage()">
-                <button onclick="sendChatMessage()" aria-label="Send message"><i class="fas fa-paper-plane"></i></button>
-            </div>
-        </div>
-    </div>
+    <!-- SMARTSUPP LIVE CHAT -->
+    <script>
+        var _smartsupp = _smartsupp || {};
+        _smartsupp.key = 'fd00ea32309b389eee975f053f5ec02d1b8ce7e7';
+        window.smartsupp||(function(d) {
+            var s,c,o=smartsupp=function(){ o._.push(arguments)};o._=[];
+            s=d.getElementsByTagName('script')[0];c=d.createElement('script');
+            c.type='text/javascript';c.charset='utf-8';c.async=true;
+            c.src='https://www.smartsuppchat.com/loader.js?';s.parentNode.insertBefore(c,s);
+        })(document);
+    </script>
+    <noscript>Powered by <a href="https://www.smartsupp.com" target="_blank">Smartsupp</a></noscript>
 
     <!-- Hidden Google Translate element -->
     <div id="google_translate_element" style="display:none;"></div>
