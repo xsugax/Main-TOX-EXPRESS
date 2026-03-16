@@ -580,7 +580,44 @@ app.post('/api/admin/shipments', verifyAdminToken, (req, res) => {
     shipments.push(newShipment);
     fs.writeFileSync(shipmentsFile, JSON.stringify(shipments, null, 2));
     logAudit('CREATE_SHIPMENT', { shipmentId: newShipment.id, origin, destination, type: newShipment.type }, req.headers['x-admin-id'] || 'admin');
+
+    // Add to shipment history (audit log)
+    logAudit('SHIPMENT_HISTORY_ADD', { shipmentId: newShipment.id, shipment: newShipment }, req.headers['x-admin-id'] || 'admin');
+
+    // Optionally: Add to a separate shipment history file if needed
+
     res.json({ success: true, shipment: newShipment });
+});
+// Mark shipment (e.g., as delivered, cancelled, etc.)
+app.patch('/api/admin/shipments/:id/mark', verifyAdminToken, (req, res) => {
+    const shipments = JSON.parse(fs.readFileSync(shipmentsFile, 'utf8'));
+    const shipment = shipments.find(s => s.id === req.params.id);
+    if (!shipment) {
+        return res.status(404).json({ error: 'Shipment not found' });
+    }
+    const updates = req.body || {};
+    // Only allow certain fields to be updated
+    const allowed = ['status', 'progress', 'eta', 'current_location', 'deliveredAt'];
+    allowed.forEach(field => {
+        if (updates[field] !== undefined) shipment[field] = updates[field];
+    });
+    fs.writeFileSync(shipmentsFile, JSON.stringify(shipments, null, 2));
+    logAudit('MARK_SHIPMENT', { shipmentId: shipment.id, updates }, req.headers['x-admin-id'] || 'admin');
+    res.json({ success: true, shipment });
+});
+
+// Delete shipment
+app.delete('/api/admin/shipments/:id', verifyAdminToken, (req, res) => {
+    let shipments = JSON.parse(fs.readFileSync(shipmentsFile, 'utf8'));
+    const idx = shipments.findIndex(s => s.id === req.params.id);
+    if (idx === -1) {
+        return res.status(404).json({ error: 'Shipment not found' });
+    }
+    const deleted = shipments[idx];
+    shipments.splice(idx, 1);
+    fs.writeFileSync(shipmentsFile, JSON.stringify(shipments, null, 2));
+    logAudit('DELETE_SHIPMENT', { shipmentId: deleted.id }, req.headers['x-admin-id'] || 'admin');
+    res.json({ success: true });
 });
 
 // Get audit logs (regulatory compliance)

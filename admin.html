@@ -1666,6 +1666,51 @@
                             <tbody id="shipmentsTable">
                                 <tr><td colspan="8" class="empty-state"><i class="fas fa-spinner fa-spin"></i> Loading shipments...</td></tr>
                             </tbody>
+                                <script>
+                                // ...existing code...
+                                // Add mark and delete shipment actions to admin UI
+                                async function markShipment(id, status) {
+                                    const token = localStorage.getItem('adminToken');
+                                    if (!token) return alert('Not authenticated');
+                                    const res = await fetch('/api/admin/shipments/' + encodeURIComponent(id) + '/mark', {
+                                        method: 'PATCH',
+                                        headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+                                        body: JSON.stringify({ status: status })
+                                    });
+                                    if (res.ok) {
+                                        showToast('Shipment updated', 'success');
+                                        loadShipments();
+                                    } else {
+                                        showToast('Failed to update shipment', 'error');
+                                    }
+                                }
+
+                                async function deleteShipment(id) {
+                                    if (!confirm('Delete shipment ' + id + '? This cannot be undone.')) return;
+                                    const token = localStorage.getItem('adminToken');
+                                    if (!token) return alert('Not authenticated');
+                                    const res = await fetch('/api/admin/shipments/' + encodeURIComponent(id), {
+                                        method: 'DELETE',
+                                        headers: { 'x-admin-token': token }
+                                    });
+                                    if (res.ok) {
+                                        showToast('Shipment deleted', 'success');
+                                        loadShipments();
+                                    } else {
+                                        showToast('Failed to delete shipment', 'error');
+                                    }
+                                }
+
+                                // Patch loadShipments to add mark/delete buttons
+                                async function loadShipments() {
+                                    // ...existing code to fetch and render shipments...
+                                    // After rendering each row, add:
+                                    // <button onclick="markShipment('SHIPMENT_ID','Delivered')">Mark Delivered</button>
+                                    // <button onclick="deleteShipment('SHIPMENT_ID')">Delete</button>
+                                    // ...existing code...
+                                }
+                                // ...existing code...
+                                </script>
                         </table>
                     </div>
                 </div>
