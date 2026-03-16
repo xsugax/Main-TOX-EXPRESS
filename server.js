@@ -5,6 +5,7 @@ const path = require('path');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const http = require('http');
+const https = require('https');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -162,6 +163,90 @@ const notificationsFile = path.join(dataDir, 'notifications.json');
 // Ensure data directory exists
 if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir);
+}
+
+// ==================== SHIPMENT PERSISTENCE ====================
+// In-memory cache seeded from JSONBin.io (when env vars set) or local file.
+// JSONBin is free (jsonbin.io) — set JSONBIN_API_KEY and JSONBIN_BIN_ID in Render
+// to make shipments survive redeploys on the ephemeral free-tier disk.
+let shipmentCache = null;
+
+function jsonBinGet() {
+    return new Promise((resolve, reject) => {
+        const options = {
+            hostname: 'api.jsonbin.io',
+            path: '/v3/b/' + process.env.JSONBIN_BIN_ID + '/latest',
+            method: 'GET',
+            headers: { 'X-Master-Key': process.env.JSONBIN_API_KEY }
+        };
+        const req = https.request(options, (res) => {
+            let body = '';
+            res.on('data', d => body += d);
+            res.on('end', () => {
+                try {
+                    const parsed = JSON.parse(body);
+                    if (Array.isArray(parsed.record)) resolve(parsed.record);
+                    else reject(new Error('JSONBin: unexpected response ' + body.substring(0, 200)));
+                } catch (e) { reject(e); }
+            });
+        });
+        req.on('error', reject);
+        req.end();
+    });
+}
+
+function jsonBinPut(data) {
+    return new Promise((resolve, reject) => {
+        const body = JSON.stringify(data);
+        const options = {
+            hostname: 'api.jsonbin.io',
+            path: '/v3/b/' + process.env.JSONBIN_BIN_ID,
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Master-Key': process.env.JSONBIN_API_KEY,
+                'Content-Length': Buffer.byteLength(body)
+            }
+        };
+        const req = https.request(options, (res) => {
+            let rb = '';
+            res.on('data', d => rb += d);
+            res.on('end', () => resolve(rb));
+        });
+        req.on('error', reject);
+        req.write(body);
+        req.end();
+    });
+}
+
+function getShipments() {
+    if (shipmentCache) return shipmentCache;
+    shipmentCache = JSON.parse(fs.readFileSync(shipmentsFile, 'utf8'));
+    return shipmentCache;
+}
+
+function saveShipments(shipments) {
+    shipmentCache = shipments;
+    fs.writeFileSync(shipmentsFile, JSON.stringify(shipments, null, 2));
+    if (process.env.JSONBIN_API_KEY && process.env.JSONBIN_BIN_ID) {
+        jsonBinPut(shipments).catch(e => console.error('[JSONBin] Save failed:', e.message));
+    }
+}
+
+async function initShipmentStore() {
+    if (process.env.JSONBIN_API_KEY && process.env.JSONBIN_BIN_ID) {
+        try {
+            const data = await jsonBinGet();
+            shipmentCache = data;
+            fs.writeFileSync(shipmentsFile, JSON.stringify(data, null, 2));
+            console.log('[JSONBin] Loaded ' + data.length + ' shipments from external store');
+            return;
+        } catch (e) {
+            console.error('[JSONBin] Could not load from external store, using local file:', e.message);
+        }
+    }
+    shipmentCache = JSON.parse(fs.readFileSync(shipmentsFile, 'utf8'));
+    console.log('[Local] Loaded ' + shipmentCache.length + ' shipments from local file');
 }
 
 // Initialize data files
@@ -323,7 +408,7 @@ app.get('/api/track/:shipmentId', rateLimit(60000, 20), (req, res) => {
     if (!/^TOX-[A-Z0-9-]{5,40}$/.test(req.params.shipmentId)) {
         return res.status(400).json({ error: 'Invalid tracking number format' });
     }
-    const shipments = JSON.parse(fs.readFileSync(shipmentsFile, 'utf8'));
+    const shipments = getShipments();
     const shipment = shipments.find(s => s.id === req.params.shipmentId);
     if (!shipment) {
         return res.status(404).json({ error: 'Shipment not found', trackingId: req.params.shipmentId });
@@ -353,7 +438,7 @@ app.get('/api/track/:shipmentId', rateLimit(60000, 20), (req, res) => {
 // Get active shipments for public map view (rate limited, minimal data)
 app.get('/api/map/shipments', rateLimit(60000, 10), (req, res) => {
     try {
-        const shipments = JSON.parse(fs.readFileSync(shipmentsFile, 'utf8'));
+        const shipments = getShipments();
         const active = shipments.filter(s => 
             s.status && !['Delivered', 'Cancelled'].includes(s.status)
         );
@@ -377,15 +462,24 @@ app.get('/api/map/shipments', rateLimit(60000, 10), (req, res) => {
 // Admin authentication with brute force protection
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'ToxAdmin2026';
 
+// Pre-compute SHA-256 hash of admin password so we can compare against
+// the hashed token sent by the browser (admin.html uses Web Crypto SHA-256)
+function sha256Hex(str) {
+    return crypto.createHash('sha256').update(str, 'utf8').digest('hex');
+}
+const ADMIN_PASSWORD_HASH = sha256Hex(ADMIN_PASSWORD);
+
 function verifyAdminToken(req, res, next) {
     const token = req.headers['x-admin-token'];
     if (!token) {
         return res.status(401).json({ error: 'No credentials provided' });
     }
-    // Constant-time comparison to prevent timing attacks
-    var tokenBuf = Buffer.from(String(token));
-    var passBuf = Buffer.from(ADMIN_PASSWORD);
-    if (tokenBuf.length !== passBuf.length || !crypto.timingSafeEqual(tokenBuf, passBuf)) {
+    const tokenStr = String(token);
+    // The browser sends SHA-256(password) — compare against our pre-hashed value
+    // Also accept plain-text password as fallback (for API/Postman use)
+    const hashMatch = tokenStr === ADMIN_PASSWORD_HASH;
+    const plainMatch = tokenStr === ADMIN_PASSWORD;
+    if (!hashMatch && !plainMatch) {
         return res.status(401).json({ error: 'Unauthorized' });
     }
     next();
@@ -446,8 +540,7 @@ app.post('/api/admin/notifications/read', verifyAdminToken, (req, res) => {
 
 // Get all shipments
 app.get('/api/admin/shipments', verifyAdminToken, (req, res) => {
-    const shipments = JSON.parse(fs.readFileSync(shipmentsFile, 'utf8'));
-    res.json(shipments);
+    res.json(getShipments());
 });
 
 // Update shipment status
@@ -457,7 +550,7 @@ app.post('/api/admin/shipments/:id/status', verifyAdminToken, (req, res) => {
         return res.status(400).json({ error: 'Invalid status' });
     }
     const safeStatus = sanitize(status);
-    const shipments = JSON.parse(fs.readFileSync(shipmentsFile, 'utf8'));
+    const shipments = getShipments();
     const shipment = shipments.find(s => s.id === req.params.shipmentId || s.id === req.params.id);
     
     if (!shipment) {
@@ -466,7 +559,7 @@ app.post('/api/admin/shipments/:id/status', verifyAdminToken, (req, res) => {
     
     const oldStatus = shipment.status;
     shipment.status = safeStatus;
-    fs.writeFileSync(shipmentsFile, JSON.stringify(shipments, null, 2));
+    saveShipments(shipments);
     
     logAudit('UPDATE_SHIPMENT_STATUS', {
         shipmentId: req.params.id,
@@ -480,7 +573,7 @@ app.post('/api/admin/shipments/:id/status', verifyAdminToken, (req, res) => {
 // Cancel shipment
 app.post('/api/admin/shipments/:id/cancel', verifyAdminToken, (req, res) => {
     const reason = sanitize(req.body.reason || 'No reason provided');
-    const shipments = JSON.parse(fs.readFileSync(shipmentsFile, 'utf8'));
+    const shipments = getShipments();
     const shipment = shipments.find(s => s.id === req.params.id);
     
     if (!shipment) {
@@ -489,7 +582,7 @@ app.post('/api/admin/shipments/:id/cancel', verifyAdminToken, (req, res) => {
     
     shipment.status = 'Cancelled';
     shipment.progress = 0;
-    fs.writeFileSync(shipmentsFile, JSON.stringify(shipments, null, 2));
+    saveShipments(shipments);
     
     logAudit('CANCEL_SHIPMENT', {
         shipmentId: req.params.id,
@@ -502,7 +595,7 @@ app.post('/api/admin/shipments/:id/cancel', verifyAdminToken, (req, res) => {
 // Update delivery details
 app.post('/api/admin/shipments/:id/delivery', verifyAdminToken, (req, res) => {
     const { progress, eta } = req.body;
-    const shipments = JSON.parse(fs.readFileSync(shipmentsFile, 'utf8'));
+    const shipments = getShipments();
     const shipment = shipments.find(s => s.id === req.params.id);
     
     if (!shipment) {
@@ -511,7 +604,7 @@ app.post('/api/admin/shipments/:id/delivery', verifyAdminToken, (req, res) => {
     
     if (progress !== undefined) shipment.progress = progress;
     if (eta) shipment.eta = eta;
-    fs.writeFileSync(shipmentsFile, JSON.stringify(shipments, null, 2));
+    saveShipments(shipments);
     
     logAudit('UPDATE_DELIVERY', {
         shipmentId: req.params.id,
@@ -534,7 +627,7 @@ app.post('/api/admin/shipments', verifyAdminToken, (req, res) => {
     if (id && !/^TOX-[A-Z0-9-]{5,40}$/.test(id)) {
         return res.status(400).json({ error: 'Invalid shipment ID format' });
     }
-    const shipments = JSON.parse(fs.readFileSync(shipmentsFile, 'utf8'));
+    const shipments = getShipments();
     const newShipment = {
         id: id || 'TOX-2026-' + String(Math.floor(Math.random() * 900000) + 100000),
         origin: sanitize(origin), destination: sanitize(destination), type: sanitize(type || 'Ocean Freight'),
@@ -578,7 +671,7 @@ app.post('/api/admin/shipments', verifyAdminToken, (req, res) => {
         };
     }
     shipments.push(newShipment);
-    fs.writeFileSync(shipmentsFile, JSON.stringify(shipments, null, 2));
+    saveShipments(shipments);
     logAudit('CREATE_SHIPMENT', { shipmentId: newShipment.id, origin, destination, type: newShipment.type }, req.headers['x-admin-id'] || 'admin');
 
     // Add to shipment history (audit log)
@@ -590,7 +683,7 @@ app.post('/api/admin/shipments', verifyAdminToken, (req, res) => {
 });
 // Mark shipment (e.g., as delivered, cancelled, etc.)
 app.patch('/api/admin/shipments/:id/mark', verifyAdminToken, (req, res) => {
-    const shipments = JSON.parse(fs.readFileSync(shipmentsFile, 'utf8'));
+    const shipments = getShipments();
     const shipment = shipments.find(s => s.id === req.params.id);
     if (!shipment) {
         return res.status(404).json({ error: 'Shipment not found' });
@@ -601,21 +694,21 @@ app.patch('/api/admin/shipments/:id/mark', verifyAdminToken, (req, res) => {
     allowed.forEach(field => {
         if (updates[field] !== undefined) shipment[field] = updates[field];
     });
-    fs.writeFileSync(shipmentsFile, JSON.stringify(shipments, null, 2));
+    saveShipments(shipments);
     logAudit('MARK_SHIPMENT', { shipmentId: shipment.id, updates }, req.headers['x-admin-id'] || 'admin');
     res.json({ success: true, shipment });
 });
 
 // Delete shipment
 app.delete('/api/admin/shipments/:id', verifyAdminToken, (req, res) => {
-    let shipments = JSON.parse(fs.readFileSync(shipmentsFile, 'utf8'));
+    let shipments = getShipments();
     const idx = shipments.findIndex(s => s.id === req.params.id);
     if (idx === -1) {
         return res.status(404).json({ error: 'Shipment not found' });
     }
     const deleted = shipments[idx];
     shipments.splice(idx, 1);
-    fs.writeFileSync(shipmentsFile, JSON.stringify(shipments, null, 2));
+    saveShipments(shipments);
     logAudit('DELETE_SHIPMENT', { shipmentId: deleted.id }, req.headers['x-admin-id'] || 'admin');
     res.json({ success: true });
 });
@@ -629,7 +722,7 @@ app.get('/api/admin/audit-logs', verifyAdminToken, (req, res) => {
 // Get dashboard stats
 app.get('/api/admin/stats', verifyAdminToken, (req, res) => {
     const visitors = JSON.parse(fs.readFileSync(visitorsFile, 'utf8'));
-    const shipments = JSON.parse(fs.readFileSync(shipmentsFile, 'utf8'));
+    const shipments = getShipments();
     const auditLog = JSON.parse(fs.readFileSync(auditLogFile, 'utf8'));
     
     const inTransit = shipments.filter(s => s.status === 'In Transit' || s.status === 'In Flight' || s.status === 'Loading').length;
@@ -680,13 +773,14 @@ app.post('/api/admin/send-email', verifyAdminToken, rateLimit(60000, 20), (req, 
         safeHtml.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&bull;/g, '•').replace(/&copy;/g, '©').substring(0, 4000) +
         '\n\n---\nTOX Express Delivery Services\n500 TOX Tower, Marina Boulevard, Singapore 018989\nthetoxexpressdeliveryservices@gmail.com | +1-800-TOX-SHIP\nhttps://toxexpress.org';
 
+    var fromAddr = process.env.EMAIL_FROM || ('"TOX Express" <' + process.env.EMAIL_USER + '>');
     var mailOptions = {
-        from: '"TOX Express" <' + process.env.EMAIL_USER + '>',
+        from: fromAddr,
         to: to,
         subject: subject,
         html: safeHtml,
         text: plainText,
-        replyTo: process.env.EMAIL_USER,
+        replyTo: process.env.EMAIL_REPLY_TO || process.env.EMAIL_USER,
         headers: {
             'X-Mailer': 'TOX Express Logistics',
             'Organization': 'TOX Express Delivery Services',
@@ -720,7 +814,9 @@ app.post('/api/admin/send-email', verifyAdminToken, rateLimit(60000, 20), (req, 
 // Initialize and start server
 initializeDataFiles();
 
-app.listen(PORT, () => {
+(async () => {
+    await initShipmentStore();
+    app.listen(PORT, () => {
     console.log(`
     ╔════════════════════════════════════════════════════════════════╗
     ║                                                                ║
@@ -739,4 +835,5 @@ app.listen(PORT, () => {
     ║                                                                ║
     ╚════════════════════════════════════════════════════════════════╝
     `);
-});
+    });
+})();

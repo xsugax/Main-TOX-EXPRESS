@@ -399,7 +399,21 @@ function addDemoShipmentRoutes() {
         'bangkok': { lat: 13.76, lng: 100.50 }, 'istanbul': { lat: 41.01, lng: 28.98 },
         'cape town': { lat: -33.93, lng: 18.42 }, 'toronto': { lat: 43.65, lng: -79.38 },
         'vancouver': { lat: 49.28, lng: -123.12 }, 'melbourne': { lat: -37.81, lng: 144.96 },
-        'lima': { lat: -12.05, lng: -77.03 }, 'karachi': { lat: 24.86, lng: 67.01 }
+        'lima': { lat: -12.05, lng: -77.03 }, 'karachi': { lat: 24.86, lng: 67.01 },
+        'la': { lat: 33.94, lng: -118.41 }, 'nyc': { lat: 40.71, lng: -74.01 },
+        'ny': { lat: 40.71, lng: -74.01 }, 'uae': { lat: 25.28, lng: 55.30 },
+        'uk': { lat: 51.51, lng: -0.13 }, 'us': { lat: 38.89, lng: -77.04 },
+        'korea': { lat: 37.57, lng: 126.98 }, 'china': { lat: 31.23, lng: 121.47 },
+        'japan': { lat: 35.68, lng: 139.69 }, 'india': { lat: 19.08, lng: 72.88 },
+        'brazil': { lat: -23.55, lng: -46.63 }, 'germany': { lat: 50.04, lng: 8.56 },
+        'france': { lat: 48.86, lng: 2.35 }, 'paris': { lat: 48.86, lng: 2.35 },
+        'amsterdam': { lat: 52.37, lng: 4.90 }, 'antwerp': { lat: 51.22, lng: 4.40 },
+        'shenzhen': { lat: 22.54, lng: 114.06 }, 'guangzhou': { lat: 23.13, lng: 113.26 },
+        'dalian': { lat: 38.91, lng: 121.60 }, 'tianjin': { lat: 39.09, lng: 117.20 },
+        'qingdao': { lat: 36.07, lng: 120.38 }, 'xiamen': { lat: 24.48, lng: 118.09 },
+        'port klang': { lat: 3.00, lng: 101.39 }, 'felixstowe': { lat: 51.96, lng: 1.35 },
+        'savannah': { lat: 32.13, lng: -81.16 }, 'houston': { lat: 29.95, lng: -95.07 },
+        'seattle': { lat: 47.45, lng: -122.31 }, 'long beach': { lat: 33.75, lng: -118.22 }
     };
 
     var routeColors = ['#E63946', '#1D3557', '#E8C84A', '#00b4d8', '#8b5cf6', '#22c55e', '#f97316'];
