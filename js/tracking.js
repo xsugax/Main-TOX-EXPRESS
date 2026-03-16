@@ -33,7 +33,7 @@ async function trackShipment() {
     detailsDiv.innerHTML = '<div class="track-loading"><i class="fas fa-spinner fa-spin"></i> Looking up shipment <strong>' + escTrack(trackingNumber) + '</strong>...</div>';
     resultDiv.style.display = 'block';
 
-    // Notify admin of tracking search
+    // Notify admin of tracking search (fire-and-forget)
     fetch('/api/visitor/click', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -41,7 +41,9 @@ async function trackShipment() {
     }).catch(function(){});
 
     try {
+        // Try server API first
         var res = await fetch('/api/track/' + encodeURIComponent(trackingNumber));
+        if (!res.ok) throw new Error('Server error');
         var data = await res.json();
 
         if (data.error) {
@@ -51,7 +53,22 @@ async function trackShipment() {
 
         detailsDiv.innerHTML = renderShipmentResult(data);
     } catch (err) {
-        detailsDiv.innerHTML = '<div class="track-error"><i class="fas fa-wifi"></i> Unable to connect to tracking server. Please try again later.</div>';
+        // Server unavailable — fall back to static shipments.json
+        try {
+            var fallbackRes = await fetch('data/shipments.json');
+            var shipments = await fallbackRes.json();
+            var found = null;
+            for (var i = 0; i < shipments.length; i++) {
+                if (shipments[i].id === trackingNumber) { found = shipments[i]; break; }
+            }
+            if (found) {
+                detailsDiv.innerHTML = renderShipmentResult(found);
+            } else {
+                detailsDiv.innerHTML = renderNotFound(trackingNumber);
+            }
+        } catch (fallbackErr) {
+            detailsDiv.innerHTML = '<div class="track-error"><i class="fas fa-wifi"></i> Unable to load tracking data. Please try again later.</div>';
+        }
     }
 }
 

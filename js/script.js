@@ -482,9 +482,12 @@ function addDemoShipmentRoutes() {
         { id: 'TOX-2026-003', origin: 'Frankfurt', destination: 'Tokyo', status: 'In Flight', type: 'Air Cargo', progress: 72, current_location: 'Central Asia Airspace' }
     ];
 
-    // Try to fetch real active shipments from server
+    // Try to fetch real active shipments from server, fall back to static JSON, then demo
     fetch('/api/map/shipments')
-        .then(function(res) { return res.json(); })
+        .then(function(res) {
+            if (!res.ok) throw new Error('Server unavailable');
+            return res.json();
+        })
         .then(function(data) {
             if (data && data.length > 0) {
                 plotRoutes(data);
@@ -493,7 +496,20 @@ function addDemoShipmentRoutes() {
             }
         })
         .catch(function() {
-            plotRoutes(demoRoutes);
+            // Try static shipments.json
+            fetch('data/shipments.json')
+                .then(function(res) { return res.json(); })
+                .then(function(shipments) {
+                    var active = shipments.filter(function(s) {
+                        return s.status && s.status !== 'Delivered' && s.status !== 'Cancelled';
+                    });
+                    if (active.length > 0) {
+                        plotRoutes(active);
+                    } else {
+                        plotRoutes(demoRoutes);
+                    }
+                })
+                .catch(function() { plotRoutes(demoRoutes); });
         });
 }
 
@@ -602,10 +618,34 @@ function handleTrackingSearch(event) {
         detailsDiv.innerHTML = '<div style="text-align:center;padding:40px 20px;color:#64748b;"><i class="fas fa-spinner fa-spin" style="font-size:2rem;color:var(--tox-red);"></i><p style="margin-top:12px;font-weight:600;">Looking up shipment <strong>' + escHtml(trackingNumber) + '</strong>...</p></div>';
     }
 
-    // Fetch from tracking API
+    // Fetch shipment data — try server API first, fall back to static JSON
     VisitorTracker.trackClick('tracking_search', { trackingId: trackingNumber });
+
+    function processTrackResult(shipments) {
+        var shipment = null;
+        for (var i = 0; i < shipments.length; i++) {
+            if (shipments[i].id === trackingNumber) { shipment = shipments[i]; break; }
+        }
+        if (!shipment) {
+            detailsDiv.innerHTML = renderHomeNotFound(trackingNumber);
+            var link = document.getElementById('fullTrackingLink');
+            if (link) link.style.display = 'none';
+            return;
+        }
+        detailsDiv.innerHTML = renderHomeTrackingResult(shipment);
+        var link = document.getElementById('fullTrackingLink');
+        if (link) {
+            link.href = 'tracking.html?id=' + encodeURIComponent(trackingNumber);
+            link.style.display = 'inline-block';
+        }
+        resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
     fetch('/api/track/' + encodeURIComponent(trackingNumber))
-        .then(function(res) { return res.json(); })
+        .then(function(res) {
+            if (!res.ok) throw new Error('Server error');
+            return res.json();
+        })
         .then(function(data) {
             if (data.error) {
                 detailsDiv.innerHTML = renderHomeNotFound(trackingNumber);
@@ -619,11 +659,16 @@ function handleTrackingSearch(event) {
                 link.href = 'tracking.html?id=' + encodeURIComponent(trackingNumber);
                 link.style.display = 'inline-block';
             }
-            // Smooth scroll to result
             resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         })
         .catch(function() {
-            detailsDiv.innerHTML = '<div style="text-align:center;padding:30px 20px;color:#ef4444;"><i class="fas fa-wifi" style="font-size:1.5rem;"></i><p style="margin-top:8px;font-weight:600;">Unable to connect to tracking server. Please try again later.</p></div>';
+            // Server unavailable — fall back to static shipments.json
+            fetch('data/shipments.json')
+                .then(function(res) { return res.json(); })
+                .then(function(shipments) { processTrackResult(shipments); })
+                .catch(function() {
+                    detailsDiv.innerHTML = '<div style="text-align:center;padding:30px 20px;color:#ef4444;"><i class="fas fa-wifi" style="font-size:1.5rem;"></i><p style="margin-top:8px;font-weight:600;">Unable to load tracking data. Please try again later.</p></div>';
+                });
         });
 }
 
