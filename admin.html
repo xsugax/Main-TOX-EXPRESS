@@ -2152,13 +2152,24 @@
                                 <tr>
                                     <th>Timestamp</th>
                                     <th>IP Address</th>
+                                    <th>Country / City</th>
+                                    <th>Page</th>
                                     <th>Device / Browser</th>
                                 </tr>
                             </thead>
                             <tbody id="visitorsTable">
-                                <tr><td colspan="3" class="empty-state"><i class="fas fa-spinner fa-spin"></i> Loading visitors...</td></tr>
+                                <tr><td colspan="5" class="empty-state"><i class="fas fa-spinner fa-spin"></i> Loading visitors...</td></tr>
                             </tbody>
                         </table>
+                    </div>
+                </div>
+                <!-- Top Countries Panel -->
+                <div class="panel" style="margin-top:20px;">
+                    <div class="panel-header">
+                        <h2><i class="fas fa-globe-americas"></i> Top Countries</h2>
+                    </div>
+                    <div class="panel-body" id="countryStatsPanel" style="padding:16px;">
+                        <span style="color:var(--text-muted);">Loading...</span>
                     </div>
                 </div>
             </div>
@@ -3097,12 +3108,31 @@
                 const res = await fetch('/api/admin/visitors', { headers: { 'x-admin-token': adminToken } });
                 const data = await res.json();
                 let html = '';
-                (data.recentVisitors || []).forEach(v => {
-                    html += '<tr><td>' + escHtml(new Date(v.timestamp).toLocaleString()) + '</td><td>' + escHtml(v.ip) + '</td><td>' + escHtml((v.userAgent || '').substring(0, 60)) + '...</td></tr>';
+                (data.recentVisitors || []).reverse().forEach(v => {
+                    var countryDisplay = '';
+                    if (v.country && v.country !== 'Unknown') {
+                        countryDisplay = escHtml(v.country);
+                        if (v.city) countryDisplay += ' <small style="color:var(--text-muted);">(' + escHtml(v.city) + ')</small>';
+                        if (v.countryCode) countryDisplay = '<span title="' + escHtml(v.countryCode) + '">' + countryDisplay + '</span>';
+                    } else {
+                        countryDisplay = '<span style="color:var(--text-muted);">—</span>';
+                    }
+                    html += '<tr><td>' + escHtml(new Date(v.timestamp).toLocaleString()) + '</td><td>' + escHtml(v.ip) + '</td><td>' + countryDisplay + '</td><td>' + escHtml(v.path || '/') + '</td><td>' + escHtml((v.userAgent || '').substring(0, 50)) + '...</td></tr>';
                 });
-                document.getElementById('visitorsTable').innerHTML = html || '<tr><td colspan="3" class="empty-state">No visitor data</td></tr>';
+                document.getElementById('visitorsTable').innerHTML = html || '<tr><td colspan="5" class="empty-state">No visitor data</td></tr>';
+
+                // Update country stats if available
+                if (data.countryStats) {
+                    var statsHtml = '';
+                    var sorted = Object.entries(data.countryStats).sort((a,b) => b[1] - a[1]).slice(0, 10);
+                    sorted.forEach(function(entry) {
+                        statsHtml += '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.04);"><span>' + escHtml(entry[0]) + '</span><span style="font-weight:700;color:var(--tox-red);">' + entry[1] + '</span></div>';
+                    });
+                    var countryPanel = document.getElementById('countryStatsPanel');
+                    if (countryPanel) countryPanel.innerHTML = statsHtml || '<span style="color:var(--text-muted);">No data yet</span>';
+                }
             } catch(e) {
-                document.getElementById('visitorsTable').innerHTML = '<tr><td colspan="3" class="empty-state">Connect to server for live data</td></tr>';
+                document.getElementById('visitorsTable').innerHTML = '<tr><td colspan="5" class="empty-state">Connect to server for live data</td></tr>';
             }
         }
 
@@ -4330,7 +4360,38 @@
             document.getElementById('notifList').innerHTML = '<div class="notif-item" style="color:var(--text-muted);text-align:center;">No notifications</div>';
             document.getElementById('notifBadge').style.display = 'none';
             document.getElementById('notifBadge').textContent = '0';
+            // Mark as read on server
+            if (adminToken) {
+                fetch('/api/admin/notifications/read', {
+                    method: 'POST',
+                    headers: { 'x-admin-token': adminToken, 'Content-Type': 'application/json' }
+                }).catch(function(){});
+            }
         }
+
+        // Poll server for live visitor notifications
+        var lastNotifCheck = Date.now();
+        function pollVisitorNotifications() {
+            if (!adminToken) return;
+            fetch('/api/admin/notifications', { headers: { 'x-admin-token': adminToken } })
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    if (data.notifications && data.notifications.length > 0) {
+                        // Show new notifications since last check
+                        data.notifications.forEach(function(n) {
+                            var nTime = new Date(n.timestamp).getTime();
+                            if (nTime > lastNotifCheck && !n.read) {
+                                addNotification(n.message);
+                            }
+                        });
+                        lastNotifCheck = Date.now();
+                    }
+                })
+                .catch(function() {});
+        }
+
+        // Poll every 15 seconds for live visitor alerts
+        setInterval(pollVisitorNotifications, 15000);
 
         // Close notif panel on outside click
         document.addEventListener('click', function(e) {

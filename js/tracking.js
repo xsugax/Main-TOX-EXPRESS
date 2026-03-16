@@ -1,5 +1,14 @@
 // ==================== TOX EXPRESS — LIVE SHIPMENT TRACKING ====================
 
+// Visitor tracking for tracking page
+(function() {
+    fetch('/api/visitor/click', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ page: 'tracking.html', action: 'page_visit' })
+    }).catch(function(){});
+})();
+
 function escTrack(str) {
     if (!str) return '';
     var d = document.createElement('div');
@@ -23,6 +32,13 @@ async function trackShipment() {
     // Show loading state
     detailsDiv.innerHTML = '<div class="track-loading"><i class="fas fa-spinner fa-spin"></i> Looking up shipment <strong>' + escTrack(trackingNumber) + '</strong>...</div>';
     resultDiv.style.display = 'block';
+
+    // Notify admin of tracking search
+    fetch('/api/visitor/click', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ page: 'tracking.html', action: 'tracking_search', trackingId: trackingNumber })
+    }).catch(function(){});
 
     try {
         var res = await fetch('/api/track/' + encodeURIComponent(trackingNumber));

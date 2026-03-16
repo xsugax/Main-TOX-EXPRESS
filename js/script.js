@@ -499,6 +499,68 @@ function addDemoShipmentRoutes() {
 
 
 // ==========================================
+// VISITOR TRACKING & COUNTRY DETECTION
+// ==========================================
+
+var VisitorTracker = {
+    cookieName: 'tox_visitor_geo',
+
+    getCookie: function(name) {
+        var match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+        return match ? decodeURIComponent(match[2]) : null;
+    },
+
+    setCookie: function(name, value, days) {
+        var d = new Date();
+        d.setTime(d.getTime() + (days * 24 * 60 * 60 * 1000));
+        document.cookie = name + '=' + encodeURIComponent(value) + ';expires=' + d.toUTCString() + ';path=/;SameSite=Lax';
+    },
+
+    getGeo: function() {
+        var raw = this.getCookie(this.cookieName);
+        if (raw) {
+            try { return JSON.parse(raw); } catch(e) {}
+        }
+        return null;
+    },
+
+    trackPageVisit: function() {
+        var self = this;
+        var page = window.location.pathname.replace(/^\//, '') || 'homepage';
+        fetch('/api/visitor/click', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ page: page, action: 'page_visit' })
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            if (data.country) {
+                self.setCookie(self.cookieName, JSON.stringify({
+                    country: data.country,
+                    city: data.city || '',
+                    countryCode: data.countryCode || ''
+                }), 30);
+            }
+        })
+        .catch(function() {});
+    },
+
+    trackClick: function(action, extra) {
+        var page = window.location.pathname.replace(/^\//, '') || 'homepage';
+        var body = { page: page, action: action };
+        if (extra) {
+            if (extra.trackingId) body.trackingId = extra.trackingId;
+        }
+        fetch('/api/visitor/click', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        }).catch(function() {});
+    }
+};
+
+
+// ==========================================
 // TRACKING SEARCH (inline results on homepage)
 // ==========================================
 
@@ -541,6 +603,7 @@ function handleTrackingSearch(event) {
     }
 
     // Fetch from tracking API
+    VisitorTracker.trackClick('tracking_search', { trackingId: trackingNumber });
     fetch('/api/track/' + encodeURIComponent(trackingNumber))
         .then(function(res) { return res.json(); })
         .then(function(data) {
@@ -863,6 +926,21 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // 10. Smartsupp chat (loaded via external script)
+
+    // 11. Visitor tracking — detect country via IP, alert admin on visits/clicks
+    VisitorTracker.trackPageVisit();
+
+    // Track all external & navigation link clicks
+    document.addEventListener('click', function(e) {
+        var link = e.target.closest('a[href]');
+        if (link) {
+            var href = link.getAttribute('href') || '';
+            // Track navigation clicks (not anchor-only links)
+            if (href && !href.startsWith('#') && !href.startsWith('javascript')) {
+                VisitorTracker.trackClick('link_click', { trackingId: href.substring(0, 100) });
+            }
+        }
+    });
 
     // 13. Form auto-save on change (debounced)
     var contactForm = document.querySelector('.contact-form');

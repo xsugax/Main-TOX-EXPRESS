@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
+const http = require('http');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -94,13 +95,13 @@ app.use((req, res, next) => {
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     res.setHeader('Content-Security-Policy',
         "default-src 'self'; " +
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://translate.google.com https://translate.googleapis.com https://cdn.jsdelivr.net; " +
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://translate.google.com https://translate.googleapis.com https://cdn.jsdelivr.net https://www.smartsuppchat.com; " +
         "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com https://translate.googleapis.com; " +
         "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; " +
-        "img-src 'self' data: https://images.pexels.com https://*.tile.openstreetmap.org https://server.arcgisonline.com https://*.tile.opentopomap.org https://translate.google.com https://www.google.com https://translate.googleapis.com; " +
+        "img-src 'self' data: https://images.pexels.com https://*.tile.openstreetmap.org https://server.arcgisonline.com https://*.tile.opentopomap.org https://translate.google.com https://www.google.com https://translate.googleapis.com https://www.smartsuppchat.com; " +
         "media-src 'self' https://videos.pexels.com; " +
-        "connect-src 'self' https://translate.googleapis.com; " +
-        "frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self';"
+        "connect-src 'self' https://translate.googleapis.com https://www.smartsuppchat.com https://*.smartsuppchat.com; " +
+        "frame-src https://www.smartsuppchat.com; object-src 'none'; base-uri 'self'; form-action 'self';"
     );
     next();
 });
@@ -156,6 +157,7 @@ const dataDir = path.join(__dirname, 'data');
 const visitorsFile = path.join(dataDir, 'visitors.json');
 const shipmentsFile = path.join(dataDir, 'shipments.json');
 const auditLogFile = path.join(dataDir, 'audit-log.json');
+const notificationsFile = path.join(dataDir, 'notifications.json');
 
 // Ensure data directory exists
 if (!fs.existsSync(dataDir)) {
@@ -169,6 +171,9 @@ function initializeDataFiles() {
     }
     if (!fs.existsSync(auditLogFile)) {
         fs.writeFileSync(auditLogFile, JSON.stringify([], null, 2));
+    }
+    if (!fs.existsSync(notificationsFile)) {
+        fs.writeFileSync(notificationsFile, JSON.stringify([], null, 2));
     }
     if (!fs.existsSync(shipmentsFile)) {
         const defaultShipments = [
@@ -198,19 +203,71 @@ function logAudit(action, details, adminId) {
     } catch(e) { console.error('Audit log error:', e.message); }
 }
 
-// Track visitor
+// IP Geolocation lookup (uses free ip-api.com, no key needed)
+function lookupGeo(ip) {
+    return new Promise((resolve) => {
+        // Skip private/local IPs
+        if (!ip || ip === '::1' || ip === '127.0.0.1' || ip.startsWith('192.168.') || ip.startsWith('10.')) {
+            return resolve({ country: 'Local', city: 'localhost', countryCode: 'XX' });
+        }
+        const cleanIp = ip.replace(/^::ffff:/, '');
+        const url = 'http://ip-api.com/json/' + encodeURIComponent(cleanIp) + '?fields=status,country,city,countryCode';
+        http.get(url, { timeout: 3000 }, (resp) => {
+            let data = '';
+            resp.on('data', c => data += c);
+            resp.on('end', () => {
+                try {
+                    const j = JSON.parse(data);
+                    if (j.status === 'success') {
+                        resolve({ country: j.country || 'Unknown', city: j.city || '', countryCode: j.countryCode || '' });
+                    } else { resolve({ country: 'Unknown', city: '', countryCode: '' }); }
+                } catch(e) { resolve({ country: 'Unknown', city: '', countryCode: '' }); }
+            });
+        }).on('error', () => resolve({ country: 'Unknown', city: '', countryCode: '' }));
+    });
+}
+
+// Add admin notification
+function addAdminNotification(type, message, details) {
+    try {
+        const notifs = JSON.parse(fs.readFileSync(notificationsFile, 'utf8'));
+        if (notifs.length > 500) notifs.splice(0, notifs.length - 250);
+        notifs.push({
+            id: Date.now().toString(36) + Math.random().toString(36).substr(2, 4),
+            type: type,
+            message: sanitize(String(message).substring(0, 300)),
+            details: details || {},
+            timestamp: new Date().toISOString(),
+            read: false
+        });
+        fs.writeFileSync(notificationsFile, JSON.stringify(notifs, null, 2));
+    } catch(e) { console.error('Notification error:', e.message); }
+}
+
+// Track visitor with geo lookup
 function trackVisitor(req) {
     try {
         const visitors = JSON.parse(fs.readFileSync(visitorsFile, 'utf8'));
-        // Limit visitor log size
         if (visitors.length > 50000) visitors.splice(0, visitors.length - 25000);
-        visitors.push({
+        const visitorEntry = {
             timestamp: new Date().toISOString(),
             ip: req.ip,
             userAgent: sanitize(String(req.get('user-agent') || '').substring(0, 500)),
-            path: sanitize(req.path.substring(0, 200))
-        });
+            path: sanitize(req.path.substring(0, 200)),
+            country: '',
+            city: '',
+            countryCode: ''
+        };
+        visitors.push(visitorEntry);
         fs.writeFileSync(visitorsFile, JSON.stringify(visitors, null, 2));
+
+        // Async geo lookup — update entry after response
+        lookupGeo(req.ip).then(geo => {
+            visitorEntry.country = geo.country;
+            visitorEntry.city = geo.city;
+            visitorEntry.countryCode = geo.countryCode;
+            try { fs.writeFileSync(visitorsFile, JSON.stringify(visitors, null, 2)); } catch(e) {}
+        });
     } catch(e) { console.error('Visitor tracking error:', e.message); }
 }
 
@@ -223,6 +280,42 @@ app.use((req, res, next) => {
 });
 
 // ==================== PUBLIC API ====================
+
+// Visitor click tracking (called from frontend)
+app.post('/api/visitor/click', rateLimit(60000, 30), (req, res) => {
+    const { page, action, trackingId } = req.body || {};
+    const ip = req.ip;
+
+    lookupGeo(ip).then(geo => {
+        const clickEvent = {
+            timestamp: new Date().toISOString(),
+            ip: ip,
+            country: geo.country,
+            city: geo.city,
+            countryCode: geo.countryCode,
+            page: sanitize(String(page || '').substring(0, 200)),
+            action: sanitize(String(action || 'page_visit').substring(0, 100)),
+            trackingId: sanitize(String(trackingId || '').substring(0, 50)),
+            userAgent: sanitize(String(req.get('user-agent') || '').substring(0, 300))
+        };
+
+        // Add notification for admin
+        let msg = '🌍 Visitor from ' + geo.country;
+        if (geo.city) msg += ' (' + geo.city + ')';
+        if (action === 'tracking_search' && trackingId) {
+            msg += ' searched tracking: ' + trackingId;
+        } else if (action === 'link_click') {
+            msg += ' clicked link on ' + (page || 'homepage');
+        } else {
+            msg += ' visited ' + (page || 'homepage');
+        }
+        addAdminNotification('visitor', msg, clickEvent);
+
+        res.json({ success: true, country: geo.country, city: geo.city, countryCode: geo.countryCode });
+    }).catch(() => {
+        res.json({ success: true });
+    });
+});
 
 // Get shipment tracking info (rate limited)
 app.get('/api/track/:shipmentId', rateLimit(60000, 20), (req, res) => {
@@ -307,6 +400,13 @@ app.get('/api/admin/visitors', verifyAdminToken, (req, res) => {
     const today = new Date().toDateString();
     const todayVisitors = visitors.filter(v => new Date(v.timestamp).toDateString() === today);
     
+    // Count visitors by country
+    const countryStats = {};
+    visitors.forEach(v => {
+        const c = v.country || 'Unknown';
+        countryStats[c] = (countryStats[c] || 0) + 1;
+    });
+
     res.json({
         totalVisitors: visitors.length,
         todayVisitors: todayVisitors.length,
@@ -316,8 +416,32 @@ app.get('/api/admin/visitors', verifyAdminToken, (req, res) => {
             oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
             return date >= oneWeekAgo;
         }).length,
-        recentVisitors: visitors.slice(-20)
+        recentVisitors: visitors.slice(-50),
+        countryStats: countryStats
     });
+});
+
+// Get admin notifications
+app.get('/api/admin/notifications', verifyAdminToken, (req, res) => {
+    try {
+        const notifs = JSON.parse(fs.readFileSync(notificationsFile, 'utf8'));
+        const unread = notifs.filter(n => !n.read).length;
+        res.json({ notifications: notifs.slice(-50).reverse(), unreadCount: unread });
+    } catch(e) {
+        res.json({ notifications: [], unreadCount: 0 });
+    }
+});
+
+// Mark notifications as read
+app.post('/api/admin/notifications/read', verifyAdminToken, (req, res) => {
+    try {
+        const notifs = JSON.parse(fs.readFileSync(notificationsFile, 'utf8'));
+        notifs.forEach(n => n.read = true);
+        fs.writeFileSync(notificationsFile, JSON.stringify(notifs, null, 2));
+        res.json({ success: true });
+    } catch(e) {
+        res.json({ success: false });
+    }
 });
 
 // Get all shipments
