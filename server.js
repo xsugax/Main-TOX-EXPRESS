@@ -94,16 +94,35 @@ app.use((req, res, next) => {
     res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
     res.setHeader('X-DNS-Prefetch-Control', 'off');
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-    res.setHeader('Content-Security-Policy',
-        "default-src 'self'; " +
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://translate.google.com https://translate.googleapis.com https://cdn.jsdelivr.net https://www.smartsuppchat.com; " +
-        "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com https://translate.googleapis.com; " +
-        "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; " +
-        "img-src 'self' data: https://images.pexels.com https://*.tile.openstreetmap.org https://server.arcgisonline.com https://*.tile.opentopomap.org https://translate.google.com https://www.google.com https://translate.googleapis.com https://www.smartsuppchat.com; " +
-        "media-src 'self' https://videos.pexels.com; " +
-        "connect-src 'self' https://translate.googleapis.com https://www.smartsuppchat.com https://*.smartsuppchat.com; " +
-        "frame-src https://www.smartsuppchat.com; object-src 'none'; base-uri 'self'; form-action 'self';"
-    );
+
+    // Dashboard page gets relaxed CSP so Smartsupp chat widget loads reliably
+    var isDashboard = req.path === '/dashboard.html' || req.path === '/dashboard';
+    if (isDashboard) {
+        res.setHeader('Content-Security-Policy',
+            "default-src 'self' https://*.smartsuppchat.com https://*.smartsupp.com; " +
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https: blob:; " +
+            "style-src 'self' 'unsafe-inline' https:; " +
+            "font-src 'self' https: data:; " +
+            "img-src 'self' data: https:; " +
+            "media-src 'self' https:; " +
+            "connect-src 'self' https: wss:; " +
+            "frame-src https:; " +
+            "worker-src 'self' blob:; " +
+            "child-src 'self' blob: https:; " +
+            "object-src 'none'; base-uri 'self'; form-action 'self';"
+        );
+    } else {
+        res.setHeader('Content-Security-Policy',
+            "default-src 'self'; " +
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://translate.google.com https://translate.googleapis.com https://cdn.jsdelivr.net; " +
+            "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com https://translate.googleapis.com; " +
+            "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; " +
+            "img-src 'self' data: https://images.pexels.com https://*.tile.openstreetmap.org https://server.arcgisonline.com https://*.tile.opentopomap.org https://translate.google.com https://www.google.com https://translate.googleapis.com; " +
+            "media-src 'self' https://videos.pexels.com; " +
+            "connect-src 'self' https://translate.googleapis.com; " +
+            "frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self';"
+        );
+    }
     next();
 });
 
@@ -431,7 +450,19 @@ app.get('/api/track/:shipmentId', rateLimit(60000, 20), (req, res) => {
         pickupDate: shipment.pickupDate || '',
         createdAt: shipment.createdAt || '',
         timeline: shipment.timeline || [],
-        current_location: shipment.current_location || ''
+        current_location: shipment.current_location || '',
+        cargo: {
+            description: shipment.cargo?.description || '',
+            hsCode: shipment.cargo?.hsCode || '',
+            insurance: shipment.cargo?.insurance || '',
+            flags: shipment.cargo?.flags || []
+        },
+        dimensions: shipment.dimensions || null,
+        incoterms: shipment.incoterms || '',
+        handling: shipment.handling || '',
+        documents: shipment.documents || [],
+        volumetricWeight: shipment.volumetricWeight || null,
+        chargeableWeight: shipment.chargeableWeight || null
     });
 });
 
@@ -454,6 +485,53 @@ app.get('/api/map/shipments', rateLimit(60000, 10), (req, res) => {
         })));
     } catch(e) {
         res.json([]);
+    }
+});
+
+// Public dashboard stats (no auth required, rate limited)
+app.get('/api/dashboard/stats', rateLimit(60000, 15), (req, res) => {
+    try {
+        const shipments = getShipments();
+        const total = shipments.length;
+        const inTransit = shipments.filter(s => ['In Transit', 'In Flight', 'Out for Delivery'].includes(s.status)).length;
+        const delivered = shipments.filter(s => s.status === 'Delivered').length;
+        const processing = shipments.filter(s => ['Processing', 'Loading', 'Pending'].includes(s.status)).length;
+        const active = total - delivered;
+
+        // Status breakdown for chart
+        const statusCounts = {};
+        shipments.forEach(s => {
+            var st = s.status || 'Unknown';
+            statusCounts[st] = (statusCounts[st] || 0) + 1;
+        });
+
+        // Recent shipments (last 10, public-safe fields only)
+        var recent = shipments.slice().sort(function(a, b) {
+            return (b.createdAt || '').localeCompare(a.createdAt || '');
+        }).slice(0, 10).map(function(s) {
+            return {
+                id: s.id,
+                origin: s.origin,
+                destination: s.destination,
+                status: s.status,
+                type: s.type,
+                progress: s.progress || 0,
+                eta: s.eta,
+                createdAt: s.createdAt || ''
+            };
+        });
+
+        res.json({
+            total: total,
+            active: active,
+            inTransit: inTransit,
+            delivered: delivered,
+            processing: processing,
+            statusCounts: statusCounts,
+            recent: recent
+        });
+    } catch(e) {
+        res.json({ total: 0, active: 0, inTransit: 0, delivered: 0, processing: 0, statusCounts: {}, recent: [] });
     }
 });
 

@@ -73,19 +73,19 @@
             <div class="kpi-grid">
                 <div class="kpi-card">
                     <h3>Active Shipments</h3>
-                    <p id="activeShipments">2,847</p>
+                    <p id="activeShipments">—</p>
                 </div>
                 <div class="kpi-card">
-                    <h3>Delivery Vehicles</h3>
-                    <p id="deliveryVehicles">1,203</p>
+                    <h3>In Transit</h3>
+                    <p id="deliveryVehicles">—</p>
                 </div>
                 <div class="kpi-card">
-                    <h3>Ports Served</h3>
-                    <p id="portsServed">156</p>
+                    <h3>Total Shipments</h3>
+                    <p id="portsServed">—</p>
                 </div>
                 <div class="kpi-card">
-                    <h3>Packages Delivered</h3>
-                    <p id="packagesDelivered">89,450</p>
+                    <h3>Delivered</h3>
+                    <p id="packagesDelivered">—</p>
                 </div>
             </div>
 
@@ -95,9 +95,14 @@
                     <canvas id="statusChart"></canvas>
                 </div>
                 <div class="chart-container">
-                    <h3>Monthly Deliveries</h3>
+                    <h3>Recent Shipments Progress</h3>
                     <canvas id="monthlyChart"></canvas>
                 </div>
+            </div>
+
+            <div class="chart-container" style="margin-top:2rem;">
+                <h3 style="margin-bottom:1rem;"><i class="fas fa-history" style="color:#E8C84A;margin-right:8px;"></i>Shipment History</h3>
+                <div id="recentShipments" style="overflow-x:auto;"></div>
             </div>
         </div>
     </section>
@@ -160,17 +165,102 @@
 
     <script src="js/dashboard.js"></script>
 
-    <!-- SMARTSUPP LIVE CHAT -->
-    <script>
-        var _smartsupp = _smartsupp || {};
-        _smartsupp.key = 'fd00ea32309b389eee975f053f5ec02d1b8ce7e7';
-        window.smartsupp||(function(d) {
-            var s,c,o=smartsupp=function(){ o._.push(arguments)};o._=[];
-            s=d.getElementsByTagName('script')[0];c=d.createElement('script');
-            c.type='text/javascript';c.charset='utf-8';c.async=true;
-            c.src='https://www.smartsuppchat.com/loader.js?';s.parentNode.insertBefore(c,s);
-        })(document);
+    <!-- Smartsupp Live Chat script -->
+    <script type="text/javascript">
+    var _smartsupp = _smartsupp || {};
+    _smartsupp.key = 'fd00ea32309b389eee975f053f5ec02d1b8ce7e7';
+    window.smartsupp||(function(d) {
+      var s,c,o=smartsupp=function(){ o._.push(arguments)};o._=[];
+      s=d.getElementsByTagName('script')[0];c=d.createElement('script');
+      c.type='text/javascript';c.charset='utf-8';c.async=true;
+      c.src='https://www.smartsuppchat.com/loader.js?';s.parentNode.insertBefore(c,s);
+    })(document);
     </script>
-    <noscript>Powered by <a href="https://www.smartsupp.com" target="_blank">Smartsupp</a></noscript>
+    <noscript> Powered by <a href="https://www.smartsupp.com" target="_blank">Smartsupp</a></noscript>
+
+    <!-- Fallback: Custom Chat Button (shows if Smartsupp fails to load) -->
+    <style>
+    #tox-chat-fallback {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        z-index: 2147483647;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #1D3557, #457B9D);
+        box-shadow: 0 4px 20px rgba(29,53,87,0.45), 0 0 0 0 rgba(29,53,87,0.4);
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        animation: tox-chat-pulse 2s infinite;
+    }
+    #tox-chat-fallback:hover {
+        transform: scale(1.1);
+        box-shadow: 0 6px 28px rgba(29,53,87,0.55);
+    }
+    #tox-chat-fallback svg {
+        width: 28px;
+        height: 28px;
+        fill: #E8C84A;
+    }
+    @keyframes tox-chat-pulse {
+        0% { box-shadow: 0 4px 20px rgba(29,53,87,0.45), 0 0 0 0 rgba(29,53,87,0.4); }
+        70% { box-shadow: 0 4px 20px rgba(29,53,87,0.45), 0 0 0 12px rgba(29,53,87,0); }
+        100% { box-shadow: 0 4px 20px rgba(29,53,87,0.45), 0 0 0 0 rgba(29,53,87,0); }
+    }
+    /* Tooltip */
+    #tox-chat-fallback::after {
+        content: 'Chat with us!';
+        position: absolute;
+        right: 72px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: #1D3557;
+        color: #E8C84A;
+        padding: 8px 14px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        white-space: nowrap;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s;
+        font-family: 'Inter', sans-serif;
+    }
+    #tox-chat-fallback:hover::after { opacity: 1; }
+    /* Hide fallback when Smartsupp widget loads */
+    #smartsupp-widget-container ~ #tox-chat-fallback,
+    .smarsupp-widget-visible #tox-chat-fallback { display: none; }
+    </style>
+    <button id="tox-chat-fallback" title="Chat with us!" aria-label="Open live chat">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12zM7 9h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2z"/></svg>
+    </button>
+    <script>
+    (function() {
+        var fb = document.getElementById('tox-chat-fallback');
+        // If Smartsupp loads, hide fallback after a delay
+        var checkSmartsupp = setInterval(function() {
+            var widget = document.getElementById('smartsupp-widget-container');
+            if (widget || (window.smartsupp && window.smartsupp._ && window.smartsupp._.length === undefined)) {
+                fb.style.display = 'none';
+                clearInterval(checkSmartsupp);
+            }
+        }, 1500);
+        // Stop checking after 20s — Smartsupp failed, keep fallback visible
+        setTimeout(function() { clearInterval(checkSmartsupp); }, 20000);
+        // Click fallback → try to open Smartsupp or open chat page
+        fb.addEventListener('click', function() {
+            if (window.smartsupp) {
+                try { smartsupp('chat:open'); return; } catch(e) {}
+            }
+            window.open('https://www.smartsupp.com/chat/' + 'fd00ea32309b389eee975f053f5ec02d1b8ce7e7', '_blank', 'noopener,noreferrer');
+        });
+    })();
+    </script>
+
 </body>
 </html>

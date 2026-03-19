@@ -413,7 +413,30 @@ function addDemoShipmentRoutes() {
         'qingdao': { lat: 36.07, lng: 120.38 }, 'xiamen': { lat: 24.48, lng: 118.09 },
         'port klang': { lat: 3.00, lng: 101.39 }, 'felixstowe': { lat: 51.96, lng: 1.35 },
         'savannah': { lat: 32.13, lng: -81.16 }, 'houston': { lat: 29.95, lng: -95.07 },
-        'seattle': { lat: 47.45, lng: -122.31 }, 'long beach': { lat: 33.75, lng: -118.22 }
+        'seattle': { lat: 47.45, lng: -122.31 }, 'long beach': { lat: 33.75, lng: -118.22 },
+        // Shipping waypoints & transit zones
+        'suez canal': { lat: 30.42, lng: 32.35 }, 'suez canal area': { lat: 30.42, lng: 32.35 },
+        'suez': { lat: 30.42, lng: 32.35 }, 'strait of malacca': { lat: 2.50, lng: 103.50 },
+        'malacca strait': { lat: 2.50, lng: 103.50 }, 'malacca': { lat: 2.50, lng: 103.50 },
+        'strait of hormuz': { lat: 26.57, lng: 56.25 }, 'hormuz': { lat: 26.57, lng: 56.25 },
+        'bab el-mandeb': { lat: 12.60, lng: 43.30 }, 'red sea': { lat: 22.00, lng: 38.00 },
+        'gulf of aden': { lat: 12.00, lng: 48.00 }, 'arabian sea': { lat: 15.00, lng: 65.00 },
+        'indian ocean': { lat: -10.00, lng: 70.00 }, 'bay of bengal': { lat: 15.00, lng: 90.00 },
+        'south china sea': { lat: 12.00, lng: 113.00 }, 'east china sea': { lat: 28.00, lng: 125.00 },
+        'pacific ocean': { lat: 20.00, lng: -160.00 }, 'north pacific': { lat: 40.00, lng: -170.00 },
+        'south pacific': { lat: -20.00, lng: -150.00 }, 'atlantic ocean': { lat: 20.00, lng: -35.00 },
+        'north atlantic': { lat: 45.00, lng: -35.00 }, 'south atlantic': { lat: -20.00, lng: -15.00 },
+        'mediterranean sea': { lat: 36.00, lng: 15.00 }, 'mediterranean': { lat: 36.00, lng: 15.00 },
+        'north sea': { lat: 56.00, lng: 3.00 }, 'english channel': { lat: 50.50, lng: 1.00 },
+        'panama canal': { lat: 9.08, lng: -79.68 }, 'panama': { lat: 9.08, lng: -79.68 },
+        'cape of good hope': { lat: -34.36, lng: 18.48 }, 'good hope': { lat: -34.36, lng: 18.48 },
+        'cape horn': { lat: -55.98, lng: -67.27 }, 'strait of gibraltar': { lat: 35.98, lng: -5.48 },
+        'gibraltar': { lat: 35.98, lng: -5.48 }, 'persian gulf': { lat: 26.00, lng: 52.00 },
+        'gulf of mexico': { lat: 25.00, lng: -90.00 }, 'caribbean sea': { lat: 15.00, lng: -75.00 },
+        'central asia airspace': { lat: 43.00, lng: 68.00 }, 'central asia': { lat: 43.00, lng: 68.00 },
+        'europe airspace': { lat: 50.00, lng: 10.00 }, 'middle east': { lat: 25.00, lng: 45.00 },
+        'west africa': { lat: 5.00, lng: 2.00 }, 'east africa': { lat: -5.00, lng: 40.00 },
+        'gulf of guinea': { lat: 2.00, lng: 3.00 }, 'mozambique channel': { lat: -18.00, lng: 40.00 }
     };
 
     var routeColors = ['#E63946', '#1D3557', '#E8C84A', '#00b4d8', '#8b5cf6', '#22c55e', '#f97316'];
@@ -424,7 +447,13 @@ function addDemoShipmentRoutes() {
         return cityCoords[key] || null;
     }
 
-    function midpoint(a, b, progress) {
+    function currentPosition(a, b, progress, current_location) {
+        // If current_location resolves to known coordinates, use those — exact match
+        if (current_location) {
+            var locCoords = getCityCoords(current_location);
+            if (locCoords) return locCoords;
+        }
+        // Fall back to proportional midpoint along route line
         var frac = Math.min(Math.max((progress || 50) / 100, 0.05), 0.95);
         return { lat: a.lat + (b.lat - a.lat) * frac, lng: a.lng + (b.lng - a.lng) * frac };
     }
@@ -440,7 +469,7 @@ function addDemoShipmentRoutes() {
             if (!originCoords || !destCoords) return;
 
             var color = routeColors[i % routeColors.length];
-            var current = midpoint(originCoords, destCoords, route.progress);
+            var current = currentPosition(originCoords, destCoords, route.progress, route.current_location);
 
             // Origin marker (green)
             var m1 = L.circleMarker([originCoords.lat, originCoords.lng], {

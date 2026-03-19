@@ -2052,6 +2052,23 @@
                                 </div>
                             </div>
 
+                            <!-- SECTION 7: SHIPPING DOCUMENTS -->
+                            <div class="form-section">
+                                <div class="form-section-title"><i class="fas fa-file-alt"></i> Shipping Documents</div>
+                                <p style="font-size:12px;color:#8899aa;margin:0 0 14px;">Select documents that apply — these will be visible on the client's tracking page.</p>
+                                <div class="checkbox-group" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+                                    <label class="checkbox-label"><input type="checkbox" id="docBillOfLading"> <i class="fas fa-ship"></i> Bill of Lading</label>
+                                    <label class="checkbox-label"><input type="checkbox" id="docAirWaybill"> <i class="fas fa-plane"></i> Air Waybill (AWB)</label>
+                                    <label class="checkbox-label"><input type="checkbox" id="docCommercialInvoice"> <i class="fas fa-file-invoice-dollar"></i> Commercial Invoice</label>
+                                    <label class="checkbox-label"><input type="checkbox" id="docPackingList"> <i class="fas fa-list-check"></i> Packing List</label>
+                                    <label class="checkbox-label"><input type="checkbox" id="docCertificateOrigin"> <i class="fas fa-certificate"></i> Certificate of Origin</label>
+                                    <label class="checkbox-label"><input type="checkbox" id="docShippingLabel"> <i class="fas fa-tag"></i> Shipping Label</label>
+                                    <label class="checkbox-label"><input type="checkbox" id="docDeliveryReceipt"> <i class="fas fa-clipboard-check"></i> Delivery Receipt</label>
+                                    <label class="checkbox-label"><input type="checkbox" id="docCustomsDecl"> <i class="fas fa-passport"></i> Customs Declaration</label>
+                                    <label class="checkbox-label"><input type="checkbox" id="docInsuranceCert"> <i class="fas fa-shield-alt"></i> Insurance Certificate</label>
+                                </div>
+                            </div>
+
                             <div class="modal-actions" style="margin-top:24px;">
                                 <button type="submit" class="btn-modal-confirm" style="padding:14px 36px;font-size:15px;"><i class="fas fa-plus"></i> Create Shipment</button>
                                 <button type="button" class="btn-modal-cancel" onclick="this.closest('form').reset(); calcVolWeight();">Reset Form</button>
@@ -3458,6 +3475,18 @@
             if (document.getElementById('newHighValue').checked) flags.push('High Value');
             if (document.getElementById('newLiveAnimals').checked) flags.push('Live Animals');
 
+            // Collect shipping documents
+            const documents = [];
+            if (document.getElementById('docBillOfLading').checked) documents.push('Bill of Lading');
+            if (document.getElementById('docAirWaybill').checked) documents.push('Air Waybill (AWB)');
+            if (document.getElementById('docCommercialInvoice').checked) documents.push('Commercial Invoice');
+            if (document.getElementById('docPackingList').checked) documents.push('Packing List');
+            if (document.getElementById('docCertificateOrigin').checked) documents.push('Certificate of Origin');
+            if (document.getElementById('docShippingLabel').checked) documents.push('Shipping Label');
+            if (document.getElementById('docDeliveryReceipt').checked) documents.push('Delivery Receipt');
+            if (document.getElementById('docCustomsDecl').checked) documents.push('Customs Declaration');
+            if (document.getElementById('docInsuranceCert').checked) documents.push('Insurance Certificate');
+
             if (!clientName || !clientEmail || !origin || !destination || !deliveryAddress || !weight || !eta || !length || !width || !height || !cargoDescription || !declaredValue || !pickupDate) {
                 toast('Please fill all required fields', 'error');
                 return;
@@ -3506,7 +3535,7 @@
                 pieces: parseInt(pieces) || 1,
                 packaging,
                 cargo: { description: cargoDescription, hsCode, declaredValue: parseFloat(declaredValue), insurance, flags },
-                pickupDate, handling
+                pickupDate, handling, documents
             };
 
             try {
@@ -3813,32 +3842,36 @@
 
         const emailTemplates = {
             shipment_created: {
-                subject: 'Shipment Confirmation - TOX Express',
-                body: 'We are pleased to confirm that your shipment has been successfully created and registered in our system.\n\nYour cargo is now being prepared for processing at our facility. You will receive tracking updates as your shipment progresses through our network.\n\nPlease keep your Shipment ID for future reference and tracking purposes.'
+                subject: 'Shipment Confirmation & Tracking Details — TOX Express',
+                body: 'We are pleased to confirm that your shipment has been successfully registered in the TOX Express global logistics network.\n\nYour cargo has been assigned a unique tracking number and is now being prepared for processing at our facility. Our operations team is handling your shipment with the highest level of care.\n\n✔ Real-time satellite tracking is now active for your shipment.\n✔ You will receive automatic email updates at every major milestone.\n✔ Our 24/7 support team is available for any queries.\n\nPlease save your Tracking ID — you can use it at any time on our website to view the live status, current location, and estimated arrival of your cargo.'
             },
             in_transit: {
-                subject: 'Shipment In Transit - TOX Express Update',
-                body: 'Great news! Your shipment is now in transit and making its way to the destination.\n\nYou can track your shipment in real-time using our satellite tracking system at toxexpress.org.\n\nIf you have any questions about your delivery, our 24/7 support team is ready to assist you.'
+                subject: 'Your Shipment Is On The Move — TOX Express Live Update',
+                body: 'Excellent news — your shipment has departed and is now actively in transit through the TOX Express global network.\n\nOur real-time tracking system is continuously monitoring your cargo. You can view the live location, route progress, and updated ETA directly on our tracking portal at any time.\n\n✔ Shipment is on schedule.\n✔ All documentation has been cleared.\n✔ Our operations center is monitoring your cargo 24/7.\n\nShould you have any questions or require an urgent update, please do not hesitate to contact your dedicated TOX Express account manager.'
             },
             on_hold: {
-                subject: 'Shipment On Hold - Action Required',
-                body: 'We are writing to inform you that your shipment has been temporarily placed on hold.\n\nThis may be due to pending documentation, customs clearance requirements, or additional verification needed.\n\nPlease contact our operations team at your earliest convenience so we can resolve this and get your shipment moving again.'
+                subject: 'Important: Your Shipment Has Been Placed On Hold — TOX Express',
+                body: 'We are writing to inform you that your shipment has been temporarily placed on hold pending resolution of an outstanding matter.\n\nThis may be related to one or more of the following:\n• Pending or incomplete documentation\n• Customs authority inspection or query\n• Regulatory compliance verification\n• Payment or insurance confirmation\n\nOur operations team is actively working to resolve this as quickly as possible. We kindly request that you contact us at your earliest convenience so we can work together to clear the hold and resume transit without further delay.\n\nWe sincerely apologize for any inconvenience and appreciate your patience and cooperation.'
             },
             delivered: {
-                subject: 'Delivery Confirmation - TOX Express',
-                body: 'We are happy to confirm that your shipment has been successfully delivered!\n\nThank you for choosing TOX Express for your logistics needs. We value your trust and look forward to serving you again.\n\nIf you have any feedback about our service, please do not hesitate to reach out.'
+                subject: '✅ Delivery Confirmed — Your Shipment Has Arrived | TOX Express',
+                body: 'We are delighted to confirm that your shipment has been successfully delivered to the specified destination address.\n\nThis completes the transit lifecycle for this consignment. A signed delivery receipt has been recorded in our system for your records.\n\n✔ Delivery completed successfully.\n✔ Proof of delivery is available on request.\n✔ All associated documentation has been archived.\n\nThank you for entrusting TOX Express with your logistics requirements. It has been our privilege to serve you. We look forward to supporting your future shipments with the same commitment to excellence.\n\nPlease take a moment to rate our service — your feedback helps us continuously improve.'
             },
             delayed: {
-                subject: 'Shipment Delay Notice - TOX Express',
-                body: 'We regret to inform you that your shipment is experiencing a delay due to unforeseen circumstances.\n\nOur team is working diligently to resolve the situation and will provide you with an updated estimated time of arrival as soon as possible.\n\nWe sincerely apologize for any inconvenience caused.'
+                subject: 'Shipment Delay Notification — Updated ETA Enclosed | TOX Express',
+                body: 'We regret to inform you that your shipment is experiencing an unexpected delay in transit.\n\nOur operations team has identified the cause and is actively working to resolve the situation and expedite your cargo to its destination as swiftly as possible.\n\nPossible factors contributing to the delay may include:\n• Adverse weather conditions affecting the transit route\n• Port congestion or vessel scheduling changes\n• Customs authority processing delays\n• Carrier operational disruptions\n\nWe will provide you with a revised Estimated Time of Arrival (ETA) as soon as it is confirmed by our logistics partners. Our team is treating this with the highest priority.\n\nWe sincerely apologize for the inconvenience caused and appreciate your continued patience and understanding.'
             },
             customs: {
-                subject: 'Customs Clearance Update - TOX Express',
-                body: 'Your shipment is currently undergoing customs clearance procedures at the destination port.\n\nThis is a standard process and typically takes 1-3 business days. Our customs brokerage team is actively monitoring the process.\n\nWe will notify you immediately once clearance is obtained and your shipment is released for final delivery.'
+                subject: 'Customs Clearance In Progress — TOX Express Update',
+                body: 'Your shipment has arrived at the destination port and has been submitted for customs clearance processing.\n\nThis is a mandatory regulatory procedure required by the destination country\'s customs authority before your cargo can be released for final delivery.\n\n✔ Customs documentation has been submitted by our brokerage team.\n✔ Duties and taxes assessment is currently underway.\n✔ Our customs specialists are actively liaising with the authority.\n\nThe clearance process typically takes 1–3 business days under normal circumstances. You will be notified immediately once clearance is granted and your shipment is released for final-mile delivery.\n\nIf you are required to provide any additional documentation or information, our team will contact you directly.'
+            },
+            out_for_delivery: {
+                subject: '📦 Out for Delivery Today — Expect Your Shipment | TOX Express',
+                body: 'Great news — your shipment has been cleared and is now out for final delivery to your specified address.\n\nOur delivery agent is en route and your cargo is expected to arrive today. Please ensure someone is available at the delivery address to receive and sign for the shipment.\n\n✔ Shipment cleared all checkpoints successfully.\n✔ Delivery agent has been dispatched.\n✔ Proof of delivery signature will be collected upon arrival.\n\nIf you need to reschedule delivery or provide access instructions, please contact our operations team immediately to update the delivery arrangements.'
             },
             welcome: {
-                subject: 'Welcome to TOX Express - Your Logistics Partner',
-                body: 'Welcome aboard! We are thrilled to have you as part of the TOX Express family.\n\nWith our global network spanning 190+ countries, real-time satellite tracking, and dedicated support team, we are committed to delivering excellence with every shipment.\n\nFeel free to explore our services and reach out to your dedicated account manager for any assistance.'
+                subject: 'Welcome to TOX Express — Your Global Logistics Partner',
+                body: 'Welcome to the TOX Express family!\n\nWe are honoured to have you as a valued client and look forward to being your trusted logistics partner for all your global shipping needs.\n\nWith operations spanning 190+ countries, a fleet of ocean, air, and ground carriers, and a dedicated team of logistics professionals, we are committed to delivering your cargo on time, every time.\n\n✔ Real-time satellite shipment tracking\n✔ 24/7 dedicated customer support\n✔ Full cargo insurance options\n✔ Customs brokerage and compliance\n✔ Door-to-door and port-to-port solutions\n\nYour dedicated account manager will be in touch shortly to introduce themselves and discuss how we can best serve your logistics requirements. In the meantime, feel free to explore our full range of services at toxexpress.org.'
             }
         };
 
@@ -3892,65 +3925,127 @@
             var safeShipId = escHtml(shipmentId || '');
             var year = new Date().getFullYear();
 
-            // TOX logo as inline SVG (no external images — inbox-safe)
             var logoSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 56 56"><rect x="3" y="11" width="50" height="35" rx="6" fill="#1D3557" stroke="#E8C84A" stroke-width="2.5"/><text x="28" y="35" text-anchor="middle" fill="#E8C84A" font-family="Arial,Helvetica,sans-serif" font-weight="900" font-size="18">TOX</text></svg>';
 
-            // Status color mapping
             var statusColors = {
                 'Processing': '#f59e0b', 'Loading': '#f59e0b', 'In Transit': '#3b82f6',
                 'In Flight': '#3b82f6', 'Customs Clearance': '#8b5cf6', 'Out for Delivery': '#0ea5e9',
                 'Delivered': '#22c55e', 'On Hold': '#ef4444', 'Delayed': '#ef4444', 'Cancelled': '#6b7280'
             };
 
-            var trackStatus = (trackingData && trackingData.status) ? escHtml(trackingData.status) : '';
-            var trackProgress = (trackingData && trackingData.progress) ? parseInt(trackingData.progress) : 0;
-            var trackOrigin = (trackingData && trackingData.origin) ? escHtml(trackingData.origin) : '';
-            var trackDest = (trackingData && trackingData.destination) ? escHtml(trackingData.destination) : '';
-            var trackEta = (trackingData && trackingData.eta) ? escHtml(trackingData.eta) : '';
-            var trackType = (trackingData && trackingData.type) ? escHtml(trackingData.type) : '';
-            var statusColor = statusColors[trackStatus] || '#3b82f6';
+            var trackStatus   = (trackingData && trackingData.status)      ? escHtml(trackingData.status)      : '';
+            var trackProgress = (trackingData && trackingData.progress)     ? parseInt(trackingData.progress)   : 0;
+            var trackOrigin   = (trackingData && trackingData.origin)       ? escHtml(trackingData.origin)      : '';
+            var trackDest     = (trackingData && trackingData.destination)  ? escHtml(trackingData.destination) : '';
+            var trackEta      = (trackingData && trackingData.eta)          ? escHtml(trackingData.eta)         : '';
+            var trackType     = (trackingData && trackingData.type)         ? escHtml(trackingData.type)        : '';
+            var trackDocs     = (trackingData && Array.isArray(trackingData.documents)) ? trackingData.documents : [];
+            var statusColor   = statusColors[trackStatus] || '#3b82f6';
 
-            // Build tracking block (only if shipment data present)
+            // === 4-Step Journey for Email ===
+            var t = trackType.toLowerCase();
+            var journeySteps, stepEmoji;
+            if (t.includes('ocean') || t.includes('sea') || t.includes('fcl') || t.includes('lcl')) {
+                journeySteps = ['Port of Origin', 'Ocean Transit', 'Port of Arrival', 'Final Delivery'];
+                stepEmoji    = ['&#9875;', '&#127754;', '&#127963;', '&#128230;'];
+            } else if (t.includes('air') || t.includes('flight') || t.includes('awb')) {
+                journeySteps = ['Departure Airport', 'In Flight', 'Arrival Airport', 'Final Delivery'];
+                stepEmoji    = ['&#9992;', '&#128747;', '&#127944;', '&#128230;'];
+            } else if (t.includes('ground') || t.includes('road') || t.includes('truck') || t.includes('express')) {
+                journeySteps = ['Pickup Point', 'On the Road', 'Local Distribution', 'Final Delivery'];
+                stepEmoji    = ['&#128205;', '&#128665;', '&#127981;', '&#128230;'];
+            } else {
+                journeySteps = ['Collection', 'In Transit', 'Customs & Arrival', 'Final Delivery'];
+                stepEmoji    = ['&#128230;', '&#128515;', '&#128220;', '&#9989;'];
+            }
+            var thresholds = [0, 25, 60, 85, 101];
+            function stepState(i) {
+                if (trackProgress >= 100) return 'done';
+                if (trackProgress >= thresholds[i + 1]) return 'done';
+                if (trackProgress >= thresholds[i]) return 'active';
+                return 'pending';
+            }
+
+            var journeyBlock = '<tr><td style="padding:0 20px 16px;">' +
+                '<p style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:#94a3b8;margin:0 0 12px;font-weight:700;">Shipment Journey</p>' +
+                '<table width="100%" cellpadding="0" cellspacing="0"><tr>';
+            journeySteps.forEach(function(step, i) {
+                var state = stepState(i);
+                var isDone   = state === 'done';
+                var isActive = state === 'active';
+                var circleBg = (isDone || isActive) ? statusColor : '#e2e8f0';
+                var textCol  = (isDone || isActive) ? statusColor : '#94a3b8';
+                var fw       = isActive ? '700' : isDone ? '600' : '400';
+                journeyBlock += '<td width="25%" align="center" style="vertical-align:top;padding:0 2px;">' +
+                    '<div style="width:38px;height:38px;border-radius:50%;background:' + circleBg + ';margin:0 auto 6px;display:flex;align-items:center;justify-content:center;text-align:center;line-height:38px;">' +
+                    '<span style="font-size:' + (isDone ? '16px' : '14px') + ';color:' + (isDone || isActive ? '#fff' : '#94a3b8') + ';">' + (isDone ? '&#10003;' : stepEmoji[i]) + '</span></div>' +
+                    (isActive ? '<div style="font-size:8px;color:' + statusColor + ';font-weight:800;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px;">NOW</div>' : '') +
+                    '<div style="font-size:10px;color:' + textCol + ';font-weight:' + fw + ';line-height:1.3;">' + escHtml(step) + '</div>' +
+                    '</td>';
+                if (i < journeySteps.length - 1) {
+                    journeyBlock += '<td width="0" align="center" style="vertical-align:top;padding-top:12px;">' +
+                        '<span style="color:#e2e8f0;font-size:14px;">&#8594;</span></td>';
+                }
+            });
+            journeyBlock += '</tr></table></td></tr>';
+
+            // === Documents block ===
+            var documentsBlock = '';
+            if (trackDocs.length > 0) {
+                documentsBlock = '<tr><td style="padding:0 20px 14px;">' +
+                    '<p style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:#94a3b8;margin:0 0 8px;font-weight:700;">&#128196; Included Documents</p>' +
+                    '<table width="100%" cellpadding="0" cellspacing="0"><tr>';
+                trackDocs.forEach(function(doc, i) {
+                    if (i > 0 && i % 2 === 0) documentsBlock += '</tr><tr>';
+                    documentsBlock += '<td width="50%" style="padding:3px 4px;">' +
+                        '<div style="background:white;border:1px solid #e2e8f0;border-radius:6px;padding:6px 10px;font-size:11px;color:#374151;font-weight:500;">' +
+                        '&#10003; ' + escHtml(doc) + '</div></td>';
+                });
+                documentsBlock += '</tr></table></td></tr>';
+            }
+
+            // Build tracking block
             var trackingBlock = '';
             if (safeShipId) {
                 trackingBlock = '<tr><td style="padding:0 40px 28px;">' +
-                    '<table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0;overflow:hidden;">' +
-                    // Tracking header
+                    '<table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;">' +
+                    // Header row
                     '<tr><td style="background:linear-gradient(135deg,#1D3557,#0d1b2a);padding:14px 20px;">' +
                     '<table width="100%" cellpadding="0" cellspacing="0"><tr>' +
                     '<td style="color:white;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;">&#128225; Shipment Tracking</td>' +
-                    '<td align="right" style="color:#E8C84A;font-family:monospace;font-size:14px;font-weight:700;letter-spacing:1px;">' + safeShipId + '</td>' +
+                    '<td align="right" style="color:#E8C84A;font-family:\'Courier New\',monospace;font-size:13px;font-weight:700;letter-spacing:1px;">' + safeShipId + '</td>' +
                     '</tr></table></td></tr>' +
-                    // Status bar
+                    // Status + progress
                     (trackStatus ? '<tr><td style="padding:16px 20px 8px;">' +
                     '<table width="100%" cellpadding="0" cellspacing="0"><tr>' +
                     '<td style="font-size:12px;color:#64748b;font-weight:600;">Current Status</td>' +
-                    '<td align="right"><span style="display:inline-block;background:' + statusColor + ';color:white;padding:4px 14px;border-radius:20px;font-size:12px;font-weight:700;letter-spacing:0.5px;">' + trackStatus + '</span></td>' +
+                    '<td align="right"><span style="display:inline-block;background:' + statusColor + ';color:white;padding:5px 16px;border-radius:20px;font-size:12px;font-weight:700;letter-spacing:0.5px;">' + trackStatus + '</span></td>' +
                     '</tr></table></td></tr>' : '') +
-                    // Progress bar
-                    (trackProgress > 0 ? '<tr><td style="padding:8px 20px 12px;">' +
+                    (trackProgress > 0 ? '<tr><td style="padding:6px 20px 10px;">' +
                     '<table width="100%" cellpadding="0" cellspacing="0" style="background:#e2e8f0;border-radius:6px;overflow:hidden;height:8px;"><tr>' +
-                    '<td style="width:' + trackProgress + '%;background:linear-gradient(90deg,' + statusColor + ',#1D3557);height:8px;border-radius:6px;"></td>' +
-                    '<td style="height:8px;"></td>' +
-                    '</tr></table>' +
-                    '<p style="text-align:right;font-size:11px;color:#94a3b8;margin:4px 0 0;font-weight:600;">' + trackProgress + '% Complete</p></td></tr>' : '') +
-                    // Route details
+                    '<td style="width:' + trackProgress + '%;background:linear-gradient(90deg,' + statusColor + ',#1D3557);height:8px;border-radius:6px;"></td><td style="height:8px;"></td></tr></table>' +
+                    '<p style="text-align:right;font-size:11px;color:#94a3b8;margin:5px 0 0;font-weight:600;">' + trackProgress + '% Complete</p></td></tr>' : '') +
+                    // Journey steps
+                    (trackProgress > 0 ? journeyBlock : '') +
+                    // Route
                     ((trackOrigin || trackDest) ? '<tr><td style="padding:4px 20px 12px;">' +
                     '<table width="100%" cellpadding="0" cellspacing="0"><tr>' +
-                    '<td width="42%" style="padding:10px;background:white;border-radius:8px;border:1px solid #e2e8f0;">' +
+                    '<td width="44%" style="padding:10px;background:white;border-radius:8px;border:1px solid #e2e8f0;">' +
                     '<div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;font-weight:600;">Origin</div>' +
-                    '<div style="font-size:14px;color:#1D3557;font-weight:700;margin-top:2px;">' + (trackOrigin || '—') + '</div></td>' +
-                    '<td width="16%" align="center" style="color:#E63946;font-size:18px;">&#9992;</td>' +
-                    '<td width="42%" style="padding:10px;background:white;border-radius:8px;border:1px solid #e2e8f0;">' +
+                    '<div style="font-size:14px;color:#1D3557;font-weight:700;margin-top:3px;">' + (trackOrigin || '&#8212;') + '</div></td>' +
+                    '<td width="12%" align="center" style="font-size:24px;color:#E63946;">&#8594;</td>' +
+                    '<td width="44%" style="padding:10px;background:white;border-radius:8px;border:1px solid #e2e8f0;">' +
                     '<div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;font-weight:600;">Destination</div>' +
-                    '<div style="font-size:14px;color:#1D3557;font-weight:700;margin-top:2px;">' + (trackDest || '—') + '</div></td>' +
+                    '<div style="font-size:14px;color:#1D3557;font-weight:700;margin-top:3px;">' + (trackDest || '&#8212;') + '</div></td>' +
                     '</tr></table></td></tr>' : '') +
-                    // ETA + Type row
-                    ((trackEta || trackType) ? '<tr><td style="padding:0 20px 14px;">' +
+                    // ETA + Type
+                    ((trackEta || trackType) ? '<tr><td style="padding:0 20px 12px;">' +
                     '<table width="100%" cellpadding="0" cellspacing="0"><tr>' +
                     (trackType ? '<td style="padding:8px 12px;background:white;border-radius:8px;border:1px solid #e2e8f0;"><div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;font-weight:600;">Service</div><div style="font-size:13px;color:#334155;font-weight:600;margin-top:2px;">' + trackType + '</div></td><td width="12"></td>' : '') +
                     (trackEta ? '<td style="padding:8px 12px;background:white;border-radius:8px;border:1px solid #e2e8f0;"><div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;font-weight:600;">Estimated Arrival</div><div style="font-size:13px;color:#334155;font-weight:600;margin-top:2px;">' + trackEta + '</div></td>' : '') +
                     '</tr></table></td></tr>' : '') +
+                    // Documents
+                    documentsBlock +
                     '</table></td></tr>';
             }
 
@@ -3961,7 +4056,7 @@
                 '<tr><td align="center">' +
                 '<table role="presentation" width="620" cellpadding="0" cellspacing="0" style="max-width:620px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.06);">' +
 
-                // ===== HEADER =====
+                // Header
                 '<tr><td style="background:linear-gradient(135deg,#1D3557 0%,#0d1b2a 100%);padding:36px 40px 28px;text-align:center;">' +
                 '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">' +
                 logoSvg +
@@ -3969,40 +4064,40 @@
                 '<p style="color:rgba(255,255,255,0.5);font-size:11px;letter-spacing:2px;margin:4px 0 0;text-transform:uppercase;">Global Logistics &amp; Delivery Services</p>' +
                 '</td></tr></table></td></tr>' +
 
-                // ===== GOLD ACCENT =====
+                // Gold accent line
                 '<tr><td style="background:linear-gradient(90deg,#E8C84A,#E63946);height:4px;font-size:0;line-height:0;">&nbsp;</td></tr>' +
 
-                // ===== GREETING =====
+                // Greeting
                 '<tr><td style="padding:36px 40px 0;">' +
                 '<p style="color:#1D3557;font-size:17px;font-weight:700;margin:0 0 6px;">Dear ' + safeName + ',</p>' +
                 '<p style="color:#64748b;font-size:13px;margin:0 0 24px;">Thank you for choosing TOX Express. Please find your update below.</p>' +
                 '</td></tr>' +
 
-                // ===== TRACKING BLOCK =====
+                // Tracking block
                 trackingBlock +
 
-                // ===== MESSAGE BODY =====
+                // Message body
                 '<tr><td style="padding:8px 40px 28px;">' +
                 '<div style="color:#334155;font-size:14px;line-height:1.9;">' + bodyHtml + '</div>' +
                 '</td></tr>' +
 
-                // ===== CTA BUTTON =====
+                // CTA button
                 '<tr><td style="padding:0 40px 36px;text-align:center;">' +
                 '<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto;"><tr><td style="background:linear-gradient(135deg,#E63946,#C1121F);border-radius:10px;padding:15px 40px;">' +
-                '<a href="https://toxexpress.org/tracking.html" style="color:white;text-decoration:none;font-weight:700;font-size:14px;letter-spacing:0.5px;display:block;">&#128506; Track Your Shipment</a>' +
+                '<a href="https://toxexpress.org/tracking.html" style="color:white;text-decoration:none;font-weight:700;font-size:14px;letter-spacing:0.5px;display:block;">&#128506; Track Your Shipment Live</a>' +
                 '</td></tr></table></td></tr>' +
 
-                // ===== TRUST BADGES =====
+                // Trust badges
                 '<tr><td style="padding:0 40px 28px;">' +
-                '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border-radius:10px;padding:16px;">' +
+                '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border-radius:10px;padding:16px;border:1px solid #e2e8f0;">' +
                 '<tr>' +
-                '<td align="center" style="padding:8px;"><div style="font-size:20px;">&#127758;</div><div style="font-size:11px;color:#64748b;font-weight:600;">190+ Countries</div></td>' +
-                '<td align="center" style="padding:8px;"><div style="font-size:20px;">&#128225;</div><div style="font-size:11px;color:#64748b;font-weight:600;">Real-Time Tracking</div></td>' +
-                '<td align="center" style="padding:8px;"><div style="font-size:20px;">&#9989;</div><div style="font-size:11px;color:#64748b;font-weight:600;">99.9% On-Time</div></td>' +
-                '<td align="center" style="padding:8px;"><div style="font-size:20px;">&#128274;</div><div style="font-size:11px;color:#64748b;font-weight:600;">Fully Insured</div></td>' +
+                '<td align="center" style="padding:8px;"><div style="font-size:20px;">&#127758;</div><div style="font-size:11px;color:#64748b;font-weight:600;margin-top:4px;">190+ Countries</div></td>' +
+                '<td align="center" style="padding:8px;"><div style="font-size:20px;">&#128225;</div><div style="font-size:11px;color:#64748b;font-weight:600;margin-top:4px;">Real-Time Tracking</div></td>' +
+                '<td align="center" style="padding:8px;"><div style="font-size:20px;">&#9989;</div><div style="font-size:11px;color:#64748b;font-weight:600;margin-top:4px;">99.9% On-Time</div></td>' +
+                '<td align="center" style="padding:8px;"><div style="font-size:20px;">&#128274;</div><div style="font-size:11px;color:#64748b;font-weight:600;margin-top:4px;">Fully Insured</div></td>' +
                 '</tr></table></td></tr>' +
 
-                // ===== FOOTER =====
+                // Footer
                 '<tr><td style="background:#1D3557;padding:32px 40px;text-align:center;">' +
                 '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">' +
                 logoSvg +
