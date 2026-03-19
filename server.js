@@ -101,12 +101,12 @@ app.use((req, res, next) => {
         "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://translate.google.com https://translate.googleapis.com https://cdn.jsdelivr.net https://www.smartsuppchat.com https://*.smartsuppchat.com https://*.smartsupp.com blob:; " +
         "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com https://translate.googleapis.com https://*.smartsuppchat.com https://*.smartsupp.com; " +
         "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com https://*.smartsuppchat.com data:; " +
-        "img-src 'self' data: https://images.pexels.com https://*.tile.openstreetmap.org https://server.arcgisonline.com https://*.tile.opentopomap.org https://translate.google.com https://www.google.com https://translate.googleapis.com https://*.smartsuppchat.com https://*.smartsupp.com; " +
+        "img-src 'self' data: https: blob:; " +
         "media-src 'self' https://videos.pexels.com; " +
-        "connect-src 'self' https://translate.googleapis.com https://*.smartsuppchat.com https://*.smartsupp.com wss://*.smartsuppchat.com wss://*.smartsupp.com; " +
-        "frame-src https://*.smartsuppchat.com https://*.smartsupp.com; " +
+        "connect-src 'self' https: wss:; " +
+        "frame-src 'self' https:; " +
         "worker-src 'self' blob:; " +
-        "child-src 'self' blob: https://*.smartsuppchat.com; " +
+        "child-src 'self' blob: https:; " +
         "object-src 'none'; base-uri 'self'; form-action 'self';"
     );
     next();
