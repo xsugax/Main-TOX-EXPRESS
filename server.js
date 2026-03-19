@@ -95,41 +95,34 @@ app.use((req, res, next) => {
     res.setHeader('X-DNS-Prefetch-Control', 'off');
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
 
-    // Dashboard page gets relaxed CSP so Smartsupp chat widget loads reliably
-    var isDashboard = req.path === '/dashboard.html' || req.path === '/dashboard';
-    if (isDashboard) {
-        res.setHeader('Content-Security-Policy',
-            "default-src 'self' https://*.smartsuppchat.com https://*.smartsupp.com; " +
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https: blob:; " +
-            "style-src 'self' 'unsafe-inline' https:; " +
-            "font-src 'self' https: data:; " +
-            "img-src 'self' data: https:; " +
-            "media-src 'self' https:; " +
-            "connect-src 'self' https: wss:; " +
-            "frame-src https:; " +
-            "worker-src 'self' blob:; " +
-            "child-src 'self' blob: https:; " +
-            "object-src 'none'; base-uri 'self'; form-action 'self';"
-        );
-    } else {
-        res.setHeader('Content-Security-Policy',
-            "default-src 'self'; " +
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://translate.google.com https://translate.googleapis.com https://cdn.jsdelivr.net; " +
-            "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com https://translate.googleapis.com; " +
-            "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; " +
-            "img-src 'self' data: https://images.pexels.com https://*.tile.openstreetmap.org https://server.arcgisonline.com https://*.tile.opentopomap.org https://translate.google.com https://www.google.com https://translate.googleapis.com; " +
-            "media-src 'self' https://videos.pexels.com; " +
-            "connect-src 'self' https://translate.googleapis.com; " +
-            "frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self';"
-        );
-    }
+    // Unified CSP: allows Smartsupp chat widget on all pages
+    res.setHeader('Content-Security-Policy',
+        "default-src 'self'; " +
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://translate.google.com https://translate.googleapis.com https://cdn.jsdelivr.net https://www.smartsuppchat.com https://*.smartsuppchat.com https://*.smartsupp.com blob:; " +
+        "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com https://translate.googleapis.com https://*.smartsuppchat.com https://*.smartsupp.com; " +
+        "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com https://*.smartsuppchat.com data:; " +
+        "img-src 'self' data: https://images.pexels.com https://*.tile.openstreetmap.org https://server.arcgisonline.com https://*.tile.opentopomap.org https://translate.google.com https://www.google.com https://translate.googleapis.com https://*.smartsuppchat.com https://*.smartsupp.com; " +
+        "media-src 'self' https://videos.pexels.com; " +
+        "connect-src 'self' https://translate.googleapis.com https://*.smartsuppchat.com https://*.smartsupp.com wss://*.smartsuppchat.com wss://*.smartsupp.com; " +
+        "frame-src https://*.smartsuppchat.com https://*.smartsupp.com; " +
+        "worker-src 'self' blob:; " +
+        "child-src 'self' blob: https://*.smartsuppchat.com; " +
+        "object-src 'none'; base-uri 'self'; form-action 'self';"
+    );
     next();
 });
 
 // Middleware
 app.use(express.static(__dirname, {
     dotfiles: 'deny',
-    index: ['index.html']
+    index: ['index.html'],
+    setHeaders: function(res, filePath) {
+        if (filePath.endsWith('.js') || filePath.endsWith('.css')) {
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            res.setHeader('Pragma', 'no-cache');
+            res.setHeader('Expires', '0');
+        }
+    }
 }));
 app.use(express.json({ limit: '1mb' }));
 
