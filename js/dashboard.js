@@ -122,14 +122,24 @@ document.addEventListener('DOMContentLoaded', function() {
     // Auto-refresh every 30 seconds
     setInterval(loadDashboard, 30000);
 
-    // ===== FLOATING CHAT WIDGET (injected via JS to guarantee visibility) =====
+    // ===== FLOATING CHAT WIDGET WITH SMARTSUPP =====
     (function injectChatWidget() {
-        // Create widget container
+        // Load Smartsupp live chat
+        var _smartsupp = window._smartsupp = window._smartsupp || {};
+        _smartsupp.key = 'fd00ea32309b389eee975f053f5ec02d1b8ce7e7';
+        window.smartsupp || (function(d) {
+            var s, c, o = window.smartsupp = function() { o._.push(arguments); }; o._ = [];
+            s = d.getElementsByTagName('script')[0]; c = d.createElement('script');
+            c.type = 'text/javascript'; c.charset = 'utf-8'; c.async = true;
+            c.src = 'https://www.smartsuppchat.com/loader.js?';
+            s.parentNode.insertBefore(c, s);
+        })(document);
+
+        // Custom branded button (always visible)
         var w = document.createElement('div');
         w.id = 'tox-live-chat-widget';
         w.setAttribute('style', 'position:fixed!important;bottom:24px!important;right:24px!important;z-index:2147483647!important;display:block!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;');
 
-        // CSS
         var css = document.createElement('style');
         css.textContent = [
             '#tox-chat-btn{width:64px!important;height:64px!important;border-radius:50%!important;background:linear-gradient(135deg,#1D3557,#457B9D)!important;box-shadow:0 4px 20px rgba(29,53,87,.5)!important;border:none!important;cursor:pointer!important;display:flex!important;align-items:center!important;justify-content:center!important;position:relative!important;transition:transform .3s,box-shadow .3s!important;animation:toxPulse 2s infinite!important;padding:0!important;margin:0!important;}',
@@ -138,45 +148,25 @@ document.addEventListener('DOMContentLoaded', function() {
             '@keyframes toxPulse{0%{box-shadow:0 4px 20px rgba(29,53,87,.5),0 0 0 0 rgba(29,53,87,.4)}70%{box-shadow:0 4px 20px rgba(29,53,87,.5),0 0 0 14px rgba(29,53,87,0)}100%{box-shadow:0 4px 20px rgba(29,53,87,.5),0 0 0 0 rgba(29,53,87,0)}}',
             '#tox-chat-btn .tox-tip{position:absolute!important;right:74px!important;top:50%!important;transform:translateY(-50%)!important;background:#1D3557!important;color:#E8C84A!important;padding:8px 16px!important;border-radius:8px!important;font-size:13px!important;font-weight:600!important;white-space:nowrap!important;opacity:0!important;pointer-events:none!important;transition:opacity .3s!important;font-family:Inter,sans-serif!important;}',
             '#tox-chat-btn:hover .tox-tip{opacity:1!important;}',
-            '#tox-chat-panel{display:none;position:absolute!important;bottom:74px!important;right:0!important;width:340px!important;background:#fff!important;border-radius:16px!important;box-shadow:0 10px 40px rgba(0,0,0,.2)!important;overflow:hidden!important;font-family:Inter,sans-serif!important;}',
-            '#tox-chat-panel.open{display:block!important;}',
-            '#tox-chat-hdr{background:linear-gradient(135deg,#1D3557,#457B9D)!important;color:#fff!important;padding:16px 20px!important;display:flex!important;align-items:center!important;justify-content:space-between!important;}',
-            '#tox-chat-hdr h4{margin:0!important;font-size:15px!important;font-weight:700!important;color:#fff!important;}',
-            '#tox-chat-hdr span{font-size:12px!important;color:rgba(255,255,255,.8)!important;}',
-            '#tox-chat-x{background:none!important;border:none!important;color:#fff!important;font-size:22px!important;cursor:pointer!important;padding:4px!important;line-height:1!important;}',
-            '#tox-chat-body{padding:20px!important;text-align:center!important;}',
-            '#tox-chat-body p{color:#334155!important;font-size:14px!important;line-height:1.6!important;margin:0 0 16px!important;}',
-            '.tox-ca{display:block!important;width:100%!important;padding:12px!important;margin-bottom:10px!important;border:none!important;border-radius:10px!important;font-size:14px!important;font-weight:600!important;cursor:pointer!important;text-decoration:none!important;text-align:center!important;box-sizing:border-box!important;font-family:Inter,sans-serif!important;}',
-            '.tox-ca.p{background:#1D3557!important;color:#E8C84A!important;}',
-            '.tox-ca.p:hover{background:#274472!important;}',
-            '.tox-ca.s{background:#f1f5f9!important;color:#1D3557!important;}',
-            '.tox-ca.s:hover{background:#e2e8f0!important;}'
+            '#smartsupp-widget-container{display:none!important;visibility:hidden!important;opacity:0!important;}'
         ].join('');
         document.head.appendChild(css);
 
-        // Button
         w.innerHTML = '<button id="tox-chat-btn" title="Chat with us!" aria-label="Open live chat">' +
             '<span class="tox-tip">Chat with us!</span>' +
             '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12zM7 9h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2z"/></svg>' +
-            '</button>' +
-            '<div id="tox-chat-panel">' +
-            '<div id="tox-chat-hdr"><div><h4>TOX Express Support</h4><span>We typically reply in minutes</span></div><button id="tox-chat-x" aria-label="Close chat">&times;</button></div>' +
-            '<div id="tox-chat-body">' +
-            '<p>Hi there! \uD83D\uDC4B How can we help you today?</p>' +
-            '<a href="mailto:support@toxexpress.org" class="tox-ca p">\u2709\uFE0F Email Support</a>' +
-            '<a href="https://wa.me/message" class="tox-ca s" target="_blank" rel="noopener noreferrer">\uD83D\uDCAC WhatsApp</a>' +
-            '</div></div>';
+            '</button>';
 
         document.body.appendChild(w);
 
-        // Interactions
-        var btn = document.getElementById('tox-chat-btn');
-        var panel = document.getElementById('tox-chat-panel');
-        var xBtn = document.getElementById('tox-chat-x');
-        btn.addEventListener('click', function() { panel.classList.toggle('open'); });
-        xBtn.addEventListener('click', function(e) { e.stopPropagation(); panel.classList.remove('open'); });
-        document.addEventListener('click', function(e) { if (!w.contains(e.target)) panel.classList.remove('open'); });
+        // Click -> open Smartsupp chat
+        document.getElementById('tox-chat-btn').addEventListener('click', function() {
+            if (window.smartsupp) {
+                try { smartsupp('chat:open'); return; } catch (e) {}
+            }
+            window.open('https://www.smartsupp.com', '_blank', 'noopener,noreferrer');
+        });
 
-        console.log('[TOX] Chat widget injected successfully');
+        console.log('[TOX] Chat widget + Smartsupp injected');
     })();
 });
