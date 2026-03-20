@@ -1497,6 +1497,7 @@
             <button class="admin-tab" onclick="switchTab('create')"><i class="fas fa-plus-circle"></i> Create Shipment</button>
             <button class="admin-tab" onclick="switchTab('active')"><i class="fas fa-globe"></i> Active Shipments</button>
             <button class="admin-tab" onclick="switchTab('visitors')"><i class="fas fa-users"></i> Visitors</button>
+            <button class="admin-tab" onclick="switchTab('history')"><i class="fas fa-history"></i> Shipment History</button>
             <button class="admin-tab" onclick="switchTab('audit')"><i class="fas fa-clipboard-list"></i> Audit Log</button>
             <button class="admin-tab" onclick="switchTab('email')"><i class="fas fa-envelope"></i> Email Clients</button>
             <button class="admin-tab" onclick="switchTab('documents')"><i class="fas fa-file-alt"></i> Documents</button>
@@ -1560,6 +1561,10 @@
                     <div class="quick-action" onclick="switchTab('shipments')">
                         <div class="qa-icon blue"><i class="fas fa-edit"></i></div>
                         <div><h4>Manage Shipments</h4><p>Update status &amp; progress</p></div>
+                    </div>
+                    <div class="quick-action" onclick="switchTab('history')">
+                        <div class="qa-icon green"><i class="fas fa-history"></i></div>
+                        <div><h4>Shipment History</h4><p>All created shipment records</p></div>
                     </div>
                     <div class="quick-action" onclick="switchTab('audit')">
                         <div class="qa-icon green"><i class="fas fa-clipboard-list"></i></div>
@@ -2232,6 +2237,58 @@
                     </div>
                     <div class="panel-body" id="countryStatsPanel" style="padding:16px;">
                         <span style="color:var(--text-muted);">Loading...</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== SHIPMENT HISTORY TAB ===== -->
+            <div class="tab-panel" id="panel-history">
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2><i class="fas fa-history"></i> Shipment Creation History</h2>
+                        <div class="panel-actions">
+                            <span id="historyCount" style="color:var(--text-muted);font-size:0.85rem;margin-right:12px;"></span>
+                            <button class="btn-export" onclick="exportData('history','csv')"><i class="fas fa-file-csv"></i> CSV</button>
+                            <button class="btn-export" onclick="exportData('history','json')"><i class="fas fa-file-code"></i> JSON</button>
+                            <button class="btn-add" onclick="switchTab('create')"><i class="fas fa-plus"></i> New Shipment</button>
+                        </div>
+                    </div>
+                    <div class="panel-toolbar">
+                        <div class="search-box">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="historySearch" placeholder="Search by ID, client, route..." oninput="filterHistory()">
+                        </div>
+                        <select id="historyStatusFilter" onchange="filterHistory()" style="padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:var(--card-bg);color:var(--text-primary);font-size:0.85rem;">
+                            <option value="">All Statuses</option>
+                            <option value="Processing">Processing</option>
+                            <option value="In Transit">In Transit</option>
+                            <option value="In Flight">In Flight</option>
+                            <option value="Loading">Loading</option>
+                            <option value="Delivered">Delivered</option>
+                            <option value="Cancelled">Cancelled</option>
+                            <option value="On Hold">On Hold</option>
+                        </select>
+                    </div>
+                    <div class="panel-body" style="padding:0; overflow-x: auto;">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Created</th>
+                                    <th>Tracking ID</th>
+                                    <th>Client</th>
+                                    <th>Route</th>
+                                    <th>Type</th>
+                                    <th>Status</th>
+                                    <th>Weight</th>
+                                    <th>Value</th>
+                                    <th>ETA</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historyTable">
+                                <tr><td colspan="10" class="empty-state"><i class="fas fa-spinner fa-spin"></i> Loading history...</td></tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -3048,6 +3105,7 @@
             document.getElementById('panel-' + tabName).classList.add('active');
             if (tabName === 'backdate') populateBackdateDropdown();
             if (tabName === 'shipments') loadShipments();
+            if (tabName === 'history') loadHistory();
             if (tabName === 'documents') populateDocShipmentDropdown();
             if (tabName === 'email') { populateEmailShipmentDropdown(); checkEmailServer(); }
         }
@@ -3055,7 +3113,7 @@
         // ==================== DATA LOADING ====================
         async function loadAllData() {
             try {
-                await Promise.all([loadStats(), loadShipments(), loadVisitors(), loadAuditLogs()]);
+                await Promise.all([loadStats(), loadShipments(), loadVisitors(), loadAuditLogs(), loadHistory()]);
                 renderMiniCharts();
                 renderGeneratedDocs();
                 loadSavedSettings();
@@ -3554,6 +3612,9 @@
                 toast('Shipment created (offline mode)', 'success');
             }
 
+            // Save to local history
+            saveToHistory(shipmentData);
+
             // Show tracking ID confirmation modal
             showTrackingIdModal(shipmentId, shipmentData);
 
@@ -3561,6 +3622,136 @@
             calcVolWeight();
             switchTab('shipments');
             loadShipments();
+        }
+
+        // ==================== SHIPMENT HISTORY ====================
+        var allHistoryCache = [];
+
+        function saveToHistory(shipmentData) {
+            var history = JSON.parse(localStorage.getItem('toxShipmentHistory') || '[]');
+            history.unshift({
+                ...shipmentData,
+                createdAt: new Date().toISOString()
+            });
+            localStorage.setItem('toxShipmentHistory', JSON.stringify(history));
+        }
+
+        async function loadHistory() {
+            var history = [];
+            // Load from server (all shipments)
+            try {
+                var res = await fetch('/api/admin/shipments', { headers: { 'x-admin-token': adminToken } });
+                if (res.ok) {
+                    var serverShipments = await res.json();
+                    history = serverShipments.map(function(s) {
+                        return { ...s, createdAt: s.createdAt || s.pickupDate || '' };
+                    });
+                }
+            } catch(e) {}
+
+            // Merge local history (add any not on server)
+            var localHistory = JSON.parse(localStorage.getItem('toxShipmentHistory') || '[]');
+            var serverIds = new Set(history.map(function(s) { return s.id; }));
+            localHistory.forEach(function(s) {
+                if (!serverIds.has(s.id)) history.push(s);
+            });
+
+            // Sort by createdAt descending
+            history.sort(function(a, b) {
+                return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+            });
+
+            allHistoryCache = history;
+            renderHistory(history);
+        }
+
+        function renderHistory(items) {
+            document.getElementById('historyCount').textContent = items.length + ' record' + (items.length !== 1 ? 's' : '');
+            var html = '';
+            items.forEach(function(s) {
+                var created = s.createdAt ? new Date(s.createdAt).toLocaleString() : '—';
+                var clientName = (s.client && s.client.name) ? escHtml(s.client.name) : '—';
+                var clientEmail = (s.client && s.client.email) ? escHtml(s.client.email) : '';
+                var cargoVal = (s.cargo && s.cargo.declaredValue) ? '$' + Number(s.cargo.declaredValue).toLocaleString() : '—';
+                var weight = s.weight ? escHtml(String(s.weight)) + ' kg' : '—';
+                var safeId = escHtml(s.id || '');
+                html += '<tr>' +
+                    '<td style="white-space:nowrap;font-size:0.82rem;">' + escHtml(created) + '</td>' +
+                    '<td><strong style="color:var(--tox-red);">' + safeId + '</strong></td>' +
+                    '<td>' + clientName + (clientEmail ? '<br><small style="color:var(--text-muted);">' + clientEmail + '</small>' : '') + '</td>' +
+                    '<td>' + escHtml(s.origin || '') + ' &rarr; ' + escHtml(s.destination || '') + '</td>' +
+                    '<td>' + escHtml(s.type || '') + '</td>' +
+                    '<td>' + getStatusBadge(s.status || 'Unknown') + '</td>' +
+                    '<td>' + weight + '</td>' +
+                    '<td>' + cargoVal + '</td>' +
+                    '<td>' + escHtml(s.eta || '—') + '</td>' +
+                    '<td>' +
+                        '<button class=\"action-btn\" onclick=\"viewHistoryDetail(\'' + safeId + '\')\" title=\"View Details\"><i class=\"fas fa-eye\"></i></button> ' +
+                        '<button class=\"action-btn\" onclick=\"quickDocFromRow(\'' + safeId + '\')\" title=\"Generate Document\" style=\"color:#E8C84A;\"><i class=\"fas fa-file-alt\"></i></button> ' +
+                        '<button class=\"action-btn\" onclick=\"quickPrintFromRow(\'' + safeId + '\')\" title=\"Print Label\" style=\"color:#22c55e;\"><i class=\"fas fa-print\"></i></button>' +
+                    '</td></tr>';
+            });
+            document.getElementById('historyTable').innerHTML = html || '<tr><td colspan="10" class="empty-state"><i class="fas fa-inbox"></i> No shipment history yet. Create your first shipment!</td></tr>';
+        }
+
+        function filterHistory() {
+            var search = (document.getElementById('historySearch').value || '').toLowerCase();
+            var statusFilter = document.getElementById('historyStatusFilter').value;
+            var filtered = allHistoryCache.filter(function(s) {
+                var matchStatus = !statusFilter || (s.status || '').toLowerCase() === statusFilter.toLowerCase();
+                if (!matchStatus) return false;
+                if (!search) return true;
+                var text = [s.id, s.origin, s.destination, s.type, s.status,
+                    s.client && s.client.name, s.client && s.client.email, s.client && s.client.company].join(' ').toLowerCase();
+                return text.indexOf(search) > -1;
+            });
+            renderHistory(filtered);
+        }
+
+        function viewHistoryDetail(id) {
+            var s = allHistoryCache.find(function(x) { return x.id === id; }) ||
+                    (allShipmentsCache || []).find(function(x) { return x.id === id; });
+            if (!s) { toast('Shipment not found', 'error'); return; }
+
+            var clientInfo = s.client ? '<strong>' + escHtml(s.client.name || '') + '</strong><br>' +
+                escHtml(s.client.email || '') + '<br>' + escHtml(s.client.phone || '') +
+                (s.client.company ? '<br>' + escHtml(s.client.company) : '') : '—';
+
+            var dims = s.dimensions ? s.dimensions.length + ' x ' + s.dimensions.width + ' x ' + s.dimensions.height + ' cm' : '—';
+            var cargoInfo = s.cargo ? escHtml(s.cargo.description || '') +
+                (s.cargo.hsCode ? '<br>HS: ' + escHtml(s.cargo.hsCode) : '') +
+                '<br>Value: $' + Number(s.cargo.declaredValue || 0).toLocaleString() +
+                (s.cargo.insurance ? '<br>Insurance: ' + escHtml(s.cargo.insurance) : '') +
+                (s.cargo.flags && s.cargo.flags.length ? '<br>Flags: ' + s.cargo.flags.map(escHtml).join(', ') : '') : '—';
+
+            var docs = (s.documents && s.documents.length) ? s.documents.map(escHtml).join(', ') : 'None';
+
+            var html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:700px;">' +
+                '<div><h4 style="color:var(--tox-red);margin-bottom:8px;">Tracking ID</h4><p style="font-size:1.1rem;font-weight:700;">' + escHtml(s.id) + '</p></div>' +
+                '<div><h4 style="color:var(--tox-red);margin-bottom:8px;">Status</h4>' + getStatusBadge(s.status || 'Unknown') + '</div>' +
+                '<div><h4 style="color:var(--tox-red);margin-bottom:8px;">Client</h4><p>' + clientInfo + '</p></div>' +
+                '<div><h4 style="color:var(--tox-red);margin-bottom:8px;">Route</h4><p>' + escHtml(s.origin || '') + ' &rarr; ' + escHtml(s.destination || '') +
+                    (s.deliveryAddress ? '<br><small>Delivery: ' + escHtml(s.deliveryAddress) + '</small>' : '') + '</p></div>' +
+                '<div><h4 style="color:var(--tox-red);margin-bottom:8px;">Shipment Type</h4><p>' + escHtml(s.type || '') + ' | Priority: ' + escHtml(s.priority || 'Standard') + '</p></div>' +
+                '<div><h4 style="color:var(--tox-red);margin-bottom:8px;">Weight & Dimensions</h4><p>' + (s.weight || 0) + ' kg | ' + (s.pieces || 1) + ' pcs<br>' + dims + '</p></div>' +
+                '<div><h4 style="color:var(--tox-red);margin-bottom:8px;">Cargo</h4><p>' + cargoInfo + '</p></div>' +
+                '<div><h4 style="color:var(--tox-red);margin-bottom:8px;">Schedule</h4><p>Pickup: ' + escHtml(s.pickupDate || '—') + '<br>ETA: ' + escHtml(s.eta || '—') +
+                    (s.incoterms ? '<br>Incoterms: ' + escHtml(s.incoterms) : '') + '</p></div>' +
+                '<div style="grid-column:1/-1;"><h4 style="color:var(--tox-red);margin-bottom:8px;">Documents</h4><p>' + docs + '</p></div>' +
+                (s.handling ? '<div style="grid-column:1/-1;"><h4 style="color:var(--tox-red);margin-bottom:8px;">Handling Instructions</h4><p>' + escHtml(s.handling) + '</p></div>' : '') +
+                (s.createdAt ? '<div style="grid-column:1/-1;color:var(--text-muted);font-size:0.82rem;">Created: ' + new Date(s.createdAt).toLocaleString() + '</div>' : '') +
+                '</div>';
+
+            // Use a simple modal overlay
+            var overlay = document.createElement('div');
+            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px;';
+            overlay.onclick = function(e) { if (e.target === overlay) document.body.removeChild(overlay); };
+            overlay.innerHTML = '<div style="background:var(--card-bg);border-radius:16px;padding:32px;max-width:750px;width:100%;max-height:85vh;overflow-y:auto;border:1px solid rgba(255,255,255,0.1);">' +
+                '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">' +
+                '<h2 style="color:white;margin:0;"><i class="fas fa-box" style="color:var(--tox-red);margin-right:8px;"></i>Shipment Details</h2>' +
+                '<button onclick="this.closest(\'div[style*=fixed]\').remove()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.3rem;"><i class="fas fa-times"></i></button></div>' +
+                html + '</div>';
+            document.body.appendChild(overlay);
         }
 
         // ==================== TRACKING ID SUCCESS MODAL ====================
@@ -4365,6 +4556,12 @@
                     }
                 });
                 filename = 'tox-audit-' + new Date().toISOString().slice(0, 10);
+            } else if (type === 'history') {
+                data = allHistoryCache.map(function(s) {
+                    return { Created: s.createdAt || '', TrackingID: s.id, Client: (s.client && s.client.name) || '', Email: (s.client && s.client.email) || '',
+                        Origin: s.origin, Destination: s.destination, Type: s.type, Status: s.status, Weight: s.weight || '', Value: (s.cargo && s.cargo.declaredValue) || '', ETA: s.eta || '' };
+                });
+                filename = 'tox-history-' + new Date().toISOString().slice(0, 10);
             }
             if (data.length === 0) { toast('No data to export', 'error'); return; }
 
