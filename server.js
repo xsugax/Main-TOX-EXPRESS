@@ -88,27 +88,14 @@ setInterval(function() {
 // ==================== SECURITY: Headers ====================
 app.use((req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    // Removed X-Frame-Options - it blocks Smartsupp iframes
     res.setHeader('X-XSS-Protection', '1; mode=block');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
     res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
     res.setHeader('X-DNS-Prefetch-Control', 'off');
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
 
-    // Unified CSP: allows Smartsupp chat widget on all pages
-    res.setHeader('Content-Security-Policy',
-        "default-src 'self'; " +
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://translate.google.com https://translate.googleapis.com https://cdn.jsdelivr.net https://www.smartsuppchat.com https://*.smartsuppchat.com https://*.smartsupp.com blob:; " +
-        "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com https://translate.googleapis.com https://*.smartsuppchat.com https://*.smartsupp.com; " +
-        "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com https://*.smartsuppchat.com data:; " +
-        "img-src 'self' data: https: blob:; " +
-        "media-src 'self' https://videos.pexels.com; " +
-        "connect-src 'self' https: wss:; " +
-        "frame-src 'self' https:; " +
-        "worker-src 'self' blob:; " +
-        "child-src 'self' blob: https:; " +
-        "object-src 'none'; base-uri 'self'; form-action 'self';"
-    );
+    // No CSP - let Smartsupp load without any restrictions
     next();
 });
 
