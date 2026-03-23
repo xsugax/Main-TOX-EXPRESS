@@ -2269,10 +2269,15 @@
                             <option value="On Hold">On Hold</option>
                         </select>
                     </div>
+                    <div class="bulk-bar" id="historyBulkBar">
+                        <span><strong id="historyBulkCount">0</strong> selected</span>
+                        <button class="action-btn danger" onclick="bulkDeleteHistory()"><i class="fas fa-trash"></i> Delete Selected</button>
+                    </div>
                     <div class="panel-body" style="padding:0; overflow-x: auto;">
                         <table class="data-table">
                             <thead>
                                 <tr>
+                                    <th><input type="checkbox" class="bulk-check" id="selectAllHistory" onclick="toggleSelectAllHistory(this)"></th>
                                     <th>Created</th>
                                     <th>Tracking ID</th>
                                     <th>Client</th>
@@ -2286,7 +2291,7 @@
                                 </tr>
                             </thead>
                             <tbody id="historyTable">
-                                <tr><td colspan="10" class="empty-state"><i class="fas fa-spinner fa-spin"></i> Loading history...</td></tr>
+                                <tr><td colspan="11" class="empty-state"><i class="fas fa-spinner fa-spin"></i> Loading history...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -3676,6 +3681,7 @@
                 var weight = s.weight ? escHtml(String(s.weight)) + ' kg' : '—';
                 var safeId = escHtml(s.id || '');
                 html += '<tr>' +
+                    '<td><input type="checkbox" class="bulk-check history-check" value="' + safeId + '" onchange="updateHistoryBulkBar()"></td>' +
                     '<td style="white-space:nowrap;font-size:0.82rem;">' + escHtml(created) + '</td>' +
                     '<td><strong style="color:var(--tox-red);">' + safeId + '</strong></td>' +
                     '<td>' + clientName + (clientEmail ? '<br><small style="color:var(--text-muted);">' + clientEmail + '</small>' : '') + '</td>' +
@@ -3691,7 +3697,11 @@
                         '<button class=\"action-btn\" onclick=\"quickPrintFromRow(\'' + safeId + '\')\" title=\"Print Label\" style=\"color:#22c55e;\"><i class=\"fas fa-print\"></i></button>' +
                     '</td></tr>';
             });
-            document.getElementById('historyTable').innerHTML = html || '<tr><td colspan="10" class="empty-state"><i class="fas fa-inbox"></i> No shipment history yet. Create your first shipment!</td></tr>';
+            document.getElementById('historyTable').innerHTML = html || '<tr><td colspan="11" class="empty-state"><i class="fas fa-inbox"></i> No shipment history yet. Create your first shipment!</td></tr>';
+            // Reset select-all checkbox
+            var sa = document.getElementById('selectAllHistory');
+            if (sa) sa.checked = false;
+            updateHistoryBulkBar();
         }
 
         function filterHistory() {
@@ -4591,6 +4601,61 @@
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
+        }
+
+        // ==================== HISTORY BULK ACTIONS ====================
+        function toggleSelectAllHistory(checkbox) {
+            var checks = document.querySelectorAll('#historyTable .history-check');
+            checks.forEach(function(c) { c.checked = checkbox.checked; });
+            updateHistoryBulkBar();
+        }
+
+        function updateHistoryBulkBar() {
+            var checked = document.querySelectorAll('#historyTable .history-check:checked');
+            var bar = document.getElementById('historyBulkBar');
+            var count = document.getElementById('historyBulkCount');
+            if (!bar) return;
+            if (checked.length > 0) {
+                bar.classList.add('visible');
+                count.textContent = checked.length;
+            } else {
+                bar.classList.remove('visible');
+            }
+        }
+
+        function getSelectedHistoryIds() {
+            var checked = document.querySelectorAll('#historyTable .history-check:checked');
+            return Array.from(checked).map(function(c) { return c.value; });
+        }
+
+        async function bulkDeleteHistory() {
+            var ids = getSelectedHistoryIds();
+            if (ids.length === 0) return;
+            if (!confirm('Permanently delete ' + ids.length + ' shipment(s) from history? This cannot be undone.')) return;
+
+            // Delete from server
+            for (var i = 0; i < ids.length; i++) {
+                try {
+                    await fetch('/api/admin/shipments/' + encodeURIComponent(ids[i]), {
+                        method: 'DELETE',
+                        headers: { 'x-admin-token': adminToken }
+                    });
+                } catch(e) {}
+            }
+
+            // Delete from localStorage
+            var localHistory = JSON.parse(localStorage.getItem('toxShipmentHistory') || '[]');
+            localHistory = localHistory.filter(function(s) { return !ids.includes(s.id); });
+            localStorage.setItem('toxShipmentHistory', JSON.stringify(localHistory));
+
+            // Update cache and re-render
+            allHistoryCache = allHistoryCache.filter(function(s) { return !ids.includes(s.id); });
+            renderHistory(allHistoryCache);
+            toast('Deleted ' + ids.length + ' shipment(s) from history', 'success');
+            addNotification('Deleted ' + ids.length + ' shipments from history');
+
+            // Also refresh active shipments list
+            loadShipments();
         }
 
         // ==================== BULK ACTIONS ====================
