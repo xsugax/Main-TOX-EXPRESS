@@ -919,23 +919,39 @@
         }
 
         @media (max-width: 768px) {
-            .admin-topbar { padding: 0 16px; }
-            .admin-tabs { padding: 0 16px; }
-            .admin-body { padding: 16px; }
+            .admin-topbar { padding: 0 12px; gap: 8px; }
+            .admin-tabs { padding: 0 12px; gap: 0; }
+            .admin-body { padding: 12px; }
             .stats-row { grid-template-columns: repeat(2, 1fr); }
             .quick-actions { grid-template-columns: 1fr; }
             .topbar-title { display: none; }
             .topbar-status { display: none; }
-            .data-table { font-size: 0.8rem; }
-            .data-table th, .data-table td { padding: 10px 8px; }
+            .data-table { font-size: 0.75rem; }
+            .data-table th, .data-table td { padding: 8px 6px; }
             .modal-form .form-row { grid-template-columns: 1fr !important; }
             .checkbox-group { flex-direction: column; }
             .form-section { padding: 14px; }
+            .panel-header { flex-direction: column; align-items: flex-start; gap: 12px; padding: 16px; }
+            .panel-actions { flex-wrap: wrap; gap: 6px; width: 100%; }
+            .panel-actions .btn-add,
+            .panel-actions .btn-export { font-size: 0.72rem; padding: 6px 10px; }
+            .panel-toolbar { flex-direction: column; gap: 8px; padding: 12px; }
+            .panel-toolbar .search-box { width: 100%; }
+            .panel-toolbar select { width: 100%; }
+            .notif-panel { right: -60px; width: calc(100vw - 24px); max-width: 340px; }
+            .bulk-bar { flex-wrap: wrap; padding: 10px 12px; gap: 8px; }
+            .admin-tab i { display: none; }
         }
 
         @media (max-width: 480px) {
             .stats-row { grid-template-columns: 1fr; }
-            .admin-tab { padding: 12px 14px; font-size: 0.78rem; }
+            .admin-tab { padding: 10px 10px; font-size: 0.72rem; }
+            .admin-topbar { height: 56px; }
+            .panel-header h2 { font-size: 0.9rem; }
+            .panel-body { padding: 12px; }
+            .notif-panel { right: -80px; width: calc(100vw - 16px); }
+            .action-btn { padding: 5px 8px; font-size: 0.7rem; }
+            .modal-content { margin: 8px; padding: 20px 16px; max-height: 92vh; }
         }
 
         /* ==================== ADMIN-UNIQUE THEME ==================== */
@@ -1099,7 +1115,7 @@
             background: rgba(0,180,216,0.06);
             border-bottom: 1px solid rgba(0,180,216,0.15);
         }
-        .bulk-bar.active { display: flex; }
+        .bulk-bar.visible { display: flex; }
         .bulk-bar span { color: #00b4d8; font-size: 0.85rem; font-weight: 600; }
         .data-table .bulk-check { width: 18px; height: 18px; accent-color: #00b4d8; cursor: pointer; }
 
@@ -1602,7 +1618,7 @@
                         <h2><i class="fas fa-boxes-stacked"></i> Recent Shipments</h2>
                         <button class="action-btn" onclick="switchTab('shipments')"><i class="fas fa-arrow-right"></i> View All</button>
                     </div>
-                    <div class="panel-body" style="padding:0;">
+                    <div class="panel-body" style="padding:0; overflow-x:auto;">
                         <table class="data-table">
                             <thead>
                                 <tr>
@@ -1787,7 +1803,7 @@
                     <div class="panel-header">
                         <h2><i class="fas fa-history"></i> Backdate History</h2>
                     </div>
-                    <div class="panel-body" style="padding:0;">
+                    <div class="panel-body" style="padding:0; overflow-x:auto;">
                         <table class="data-table">
                             <thead>
                                 <tr>
@@ -5323,6 +5339,5 @@
             if (e.key === 'Enter') document.querySelector('.login-btn').click();
         });
     </script>
-    <script src="js/chat-widget.js"></script>
 </body>
 </html>
