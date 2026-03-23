@@ -3174,14 +3174,14 @@ img { max-width: 100%; height: auto; display: block; }
 .lang-dropdown {
     position: absolute;
     top: calc(100% + 8px);
-    right: 0;
+    left: 0;
     background: white;
     border: 1px solid rgba(0,0,0,0.1);
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-lg);
     display: none;
-    width: 200px;
-    max-height: 340px;
+    width: 220px;
+    max-height: 400px;
     overflow-y: auto;
     z-index: 5000;
     padding: 6px 0;
@@ -3839,6 +3839,13 @@ body[data-theme="dark"] {
 
     .nav-actions {
         order: -1;
+    }
+
+    .lang-dropdown {
+        left: 0;
+        right: auto;
+        min-width: 200px;
+        max-width: 90vw;
     }
 
     /* Touch-friendly nav links */
