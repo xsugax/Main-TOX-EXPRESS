@@ -947,9 +947,15 @@
             .stats-row { grid-template-columns: 1fr; }
             .admin-tab { padding: 10px 10px; font-size: 0.72rem; }
             .admin-topbar { height: 56px; }
+            .panel-header { padding: 12px; gap: 10px; }
             .panel-header h2 { font-size: 0.9rem; }
+            .panel-actions { gap: 4px; }
+            .panel-actions .btn-add,
+            .panel-actions .btn-export { font-size: 0.68rem; padding: 5px 8px; }
             .panel-body { padding: 12px; }
+            .panel-toolbar { padding: 10px 12px; gap: 6px; }
             .notif-panel { right: -80px; width: calc(100vw - 16px); }
+            .bulk-bar { padding: 8px 10px; gap: 6px; font-size: 0.78rem; }
             .action-btn { padding: 5px 8px; font-size: 0.7rem; }
             .modal-content { margin: 8px; padding: 20px 16px; max-height: 92vh; }
         }
@@ -5334,10 +5340,6 @@
             return hashArray.map(function(b) { return b.toString(16).padStart(2, '0'); }).join('');
         }
 
-        // Enter on login
-        document.getElementById('adminPass').addEventListener('keypress', e => {
-            if (e.key === 'Enter') document.querySelector('.login-btn').click();
-        });
     </script>
 </body>
 </html>
