@@ -1078,7 +1078,6 @@ function initLiveActivityFeed() {
     var maxItems = 7;
 
     var events = [
-        { action: 'delivered in', dot: 'dot-green' },
         { action: 'cleared customs in', dot: 'dot-blue' },
         { action: 'picked up from', dot: 'dot-green' },
         { action: 'arrived at', dot: 'dot-blue' },
@@ -1086,8 +1085,9 @@ function initLiveActivityFeed() {
         { action: 'in transit to', dot: 'dot-blue' },
         { action: 'loaded onto vessel at', dot: 'dot-orange' },
         { action: 'reached sorting hub in', dot: 'dot-blue' },
-        { action: 'out for delivery in', dot: 'dot-green' },
-        { action: 'scanned at facility in', dot: 'dot-blue' }
+        { action: 'scanned at facility in', dot: 'dot-blue' },
+        { action: 'processed at warehouse in', dot: 'dot-green' },
+        { action: 'awaiting clearance in', dot: 'dot-orange' }
     ];
 
     var locations = [
