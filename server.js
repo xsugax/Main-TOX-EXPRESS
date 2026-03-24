@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const http = require('http');
 const https = require('https');
+const { MongoClient } = require('mongodb');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -242,14 +243,97 @@ if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir);
 }
 
-// ==================== SHIPMENT PERSISTENCE (BULLETPROOF) ====================
-// JSONBin.io is the PERMANENT source of truth — survives Render redeploys.
-// Local file is just a fast cache. JSONBin ALWAYS wins.
-// Set JSONBIN_API_KEY and JSONBIN_BIN_ID in Render environment variables.
-let shipmentCache = null;
-let jsonBinHealthy = false;  // Track if JSONBin is working
-let lastJsonBinSync = 0;     // Timestamp of last successful sync
+// ==================== SHIPMENT PERSISTENCE (MONGODB PRIMARY) ====================
+// MongoDB Atlas (free 512MB) = YOUR OWN permanent database.
+// Shipments NEVER auto-delete — only admin can remove them.
+// Set MONGODB_URI in Render environment variables.
+// JSONBin kept as secondary backup only.
 
+let shipmentCache = null;
+let mongoDb = null;           // MongoDB database reference
+let mongoCollection = null;   // MongoDB shipments collection
+let mongoHealthy = false;     // Track if MongoDB is connected
+let jsonBinHealthy = false;   // Track if JSONBin backup is working
+let lastDbSync = 0;           // Timestamp of last successful DB operation
+
+// ---- MongoDB Connection ----
+async function connectMongo() {
+    if (!process.env.MONGODB_URI) return false;
+    try {
+        const client = new MongoClient(process.env.MONGODB_URI, {
+            serverSelectionTimeoutMS: 10000,
+            connectTimeoutMS: 10000,
+            socketTimeoutMS: 30000,
+            retryWrites: true,
+            retryReads: true
+        });
+        await client.connect();
+        // Verify connection
+        await client.db().admin().ping();
+        mongoDb = client.db('toxexpress');
+        mongoCollection = mongoDb.collection('shipments');
+        // Create index on shipment ID for fast lookups
+        await mongoCollection.createIndex({ id: 1 }, { unique: true, background: true });
+        mongoHealthy = true;
+        lastDbSync = Date.now();
+        console.log('  ✅ MongoDB connected — your shipments are permanently stored');
+        return true;
+    } catch (e) {
+        console.error('  ❌ MongoDB connection FAILED:', e.message);
+        mongoHealthy = false;
+        return false;
+    }
+}
+
+// ---- MongoDB CRUD Operations ----
+async function mongoGetAll() {
+    if (!mongoCollection) throw new Error('MongoDB not connected');
+    const docs = await mongoCollection.find({}).toArray();
+    // Strip MongoDB _id field for compatibility
+    return docs.map(d => { const { _id, ...rest } = d; return rest; });
+}
+
+async function mongoSaveAll(shipments) {
+    if (!mongoCollection) throw new Error('MongoDB not connected');
+    // Use bulkWrite for atomic replacement of all shipments
+    const ops = [];
+    for (const s of shipments) {
+        ops.push({
+            replaceOne: {
+                filter: { id: s.id },
+                replacement: s,
+                upsert: true
+            }
+        });
+    }
+    if (ops.length > 0) {
+        await mongoCollection.bulkWrite(ops, { ordered: false });
+    }
+    // Remove shipments from DB that are no longer in the array (admin deleted them)
+    const currentIds = shipments.map(s => s.id);
+    await mongoCollection.deleteMany({ id: { $nin: currentIds } });
+    lastDbSync = Date.now();
+}
+
+async function mongoInsertOne(shipment) {
+    if (!mongoCollection) throw new Error('MongoDB not connected');
+    await mongoCollection.replaceOne({ id: shipment.id }, shipment, { upsert: true });
+    lastDbSync = Date.now();
+}
+
+async function mongoUpdateOne(shipmentId, updates) {
+    if (!mongoCollection) throw new Error('MongoDB not connected');
+    await mongoCollection.updateOne({ id: shipmentId }, { $set: updates });
+    lastDbSync = Date.now();
+}
+
+async function mongoDeleteOne(shipmentId) {
+    if (!mongoCollection) throw new Error('MongoDB not connected');
+    await mongoCollection.deleteOne({ id: shipmentId });
+    lastDbSync = Date.now();
+}
+
+// ---- JSONBin (Backup Only) ----
 function jsonBinGet() {
     return new Promise((resolve, reject) => {
         if (!process.env.JSONBIN_API_KEY || !process.env.JSONBIN_BIN_ID) {
@@ -268,12 +352,8 @@ function jsonBinGet() {
             res.on('end', () => {
                 try {
                     const parsed = JSON.parse(body);
-                    if (Array.isArray(parsed.record)) {
-                        jsonBinHealthy = true;
-                        resolve(parsed.record);
-                    } else {
-                        reject(new Error('JSONBin: unexpected response ' + body.substring(0, 200)));
-                    }
+                    if (Array.isArray(parsed.record)) { jsonBinHealthy = true; resolve(parsed.record); }
+                    else reject(new Error('JSONBin: unexpected response'));
                 } catch (e) { reject(e); }
             });
         });
@@ -304,13 +384,8 @@ function jsonBinPut(data) {
             let rb = '';
             res.on('data', d => rb += d);
             res.on('end', () => {
-                if (res.statusCode >= 200 && res.statusCode < 300) {
-                    jsonBinHealthy = true;
-                    lastJsonBinSync = Date.now();
-                    resolve(rb);
-                } else {
-                    reject(new Error('JSONBin PUT HTTP ' + res.statusCode + ': ' + rb.substring(0, 200)));
-                }
+                if (res.statusCode >= 200 && res.statusCode < 300) { jsonBinHealthy = true; resolve(rb); }
+                else reject(new Error('JSONBin PUT HTTP ' + res.statusCode));
             });
         });
         req.setTimeout(15000, () => { req.destroy(); reject(new Error('JSONBin PUT timeout')); });
@@ -320,31 +395,7 @@ function jsonBinPut(data) {
     });
 }
 
-// Retry wrapper — tries up to 3 times with delay
-async function jsonBinGetWithRetry() {
-    for (var attempt = 1; attempt <= 3; attempt++) {
-        try {
-            return await jsonBinGet();
-        } catch (e) {
-            console.error('  [JSONBin] GET attempt ' + attempt + '/3 failed:', e.message);
-            if (attempt < 3) await new Promise(r => setTimeout(r, 2000 * attempt));
-        }
-    }
-    throw new Error('JSONBin GET failed after 3 attempts');
-}
-
-async function jsonBinPutWithRetry(data) {
-    for (var attempt = 1; attempt <= 3; attempt++) {
-        try {
-            return await jsonBinPut(data);
-        } catch (e) {
-            console.error('  [JSONBin] PUT attempt ' + attempt + '/3 failed:', e.message);
-            if (attempt < 3) await new Promise(r => setTimeout(r, 2000 * attempt));
-        }
-    }
-    throw new Error('JSONBin PUT failed after 3 attempts');
-}
-
+// ---- Core Storage Functions (used by all endpoints) ----
 function getShipments() {
     if (shipmentCache) return shipmentCache;
     try {
@@ -357,74 +408,149 @@ function getShipments() {
 
 function saveShipments(shipments) {
     shipmentCache = shipments;
-    // Always save locally first (fast)
-    try {
-        fs.writeFileSync(shipmentsFile, JSON.stringify(shipments, null, 2));
-    } catch(e) { console.error('[Local] Write failed:', e.message); }
+    // 1. Save locally (fast cache)
+    try { fs.writeFileSync(shipmentsFile, JSON.stringify(shipments, null, 2)); } catch(e) {}
 
-    // Then sync to JSONBin with retry (this is the permanent copy)
+    // 2. Save to MongoDB (PRIMARY permanent store)
+    if (mongoHealthy && mongoCollection) {
+        mongoSaveAll(shipments)
+            .then(() => { console.log('  [MongoDB] Saved ' + shipments.length + ' shipments'); })
+            .catch(e => { mongoHealthy = false; console.error('  ⚠️  [MongoDB] Save failed:', e.message); });
+    }
+
+    // 3. Backup to JSONBin (SECONDARY backup)
     if (process.env.JSONBIN_API_KEY && process.env.JSONBIN_BIN_ID) {
-        jsonBinPutWithRetry(shipments)
-            .then(() => { console.log('  [JSONBin] Synced ' + shipments.length + ' shipments'); })
-            .catch(e => {
-                jsonBinHealthy = false;
-                console.error('  ⚠️  [JSONBin] SYNC FAILED after retries:', e.message);
-                console.error('  ⚠️  Shipments are ONLY in local cache — will retry on next save');
-            });
+        jsonBinPut(shipments).catch(e => { jsonBinHealthy = false; });
     }
 }
 
-async function initShipmentStore() {
-    var hasJsonBin = !!(process.env.JSONBIN_API_KEY && process.env.JSONBIN_BIN_ID);
+// Smart save — for single shipment operations (faster than full array sync)
+function saveShipmentUpdate(shipmentId, updates) {
+    // Local + cache already updated by caller
+    try { fs.writeFileSync(shipmentsFile, JSON.stringify(shipmentCache, null, 2)); } catch(e) {}
 
-    if (hasJsonBin) {
-        console.log('  [JSONBin] External storage configured — loading from JSONBin...');
-        try {
-            const data = await jsonBinGetWithRetry();
-            shipmentCache = data;
-            // Write to local file as cache
-            try { fs.writeFileSync(shipmentsFile, JSON.stringify(data, null, 2)); } catch(e) {}
-            console.log('  ✅ [JSONBin] Loaded ' + data.length + ' shipments from external store');
-            jsonBinHealthy = true;
-            lastJsonBinSync = Date.now();
-            return;
-        } catch (e) {
-            console.error('  ❌ [JSONBin] FAILED to load after 3 retries:', e.message);
-            console.error('  ⚠️  IMPORTANT: Falling back to local file. Your real shipments may be in JSONBin.');
-            console.error('  ⚠️  Check JSONBIN_API_KEY and JSONBIN_BIN_ID env vars in Render.');
-            jsonBinHealthy = false;
+    if (mongoHealthy && mongoCollection) {
+        mongoUpdateOne(shipmentId, updates).catch(e => {
+            mongoHealthy = false;
+            console.error('  ⚠️  [MongoDB] Update failed:', e.message);
+        });
+    }
+    // JSONBin gets full sync on periodic backup
+}
+
+function saveShipmentInsert(shipment) {
+    try { fs.writeFileSync(shipmentsFile, JSON.stringify(shipmentCache, null, 2)); } catch(e) {}
+
+    if (mongoHealthy && mongoCollection) {
+        mongoInsertOne(shipment).catch(e => {
+            mongoHealthy = false;
+            console.error('  ⚠️  [MongoDB] Insert failed:', e.message);
+        });
+    }
+    if (process.env.JSONBIN_API_KEY && process.env.JSONBIN_BIN_ID) {
+        jsonBinPut(shipmentCache).catch(() => {});
+    }
+}
+
+function saveShipmentDelete(shipmentId) {
+    try { fs.writeFileSync(shipmentsFile, JSON.stringify(shipmentCache, null, 2)); } catch(e) {}
+
+    if (mongoHealthy && mongoCollection) {
+        mongoDeleteOne(shipmentId).catch(e => {
+            mongoHealthy = false;
+            console.error('  ⚠️  [MongoDB] Delete failed:', e.message);
+        });
+    }
+    if (process.env.JSONBIN_API_KEY && process.env.JSONBIN_BIN_ID) {
+        jsonBinPut(shipmentCache).catch(() => {});
+    }
+}
+
+// ---- Startup: Load shipments from MongoDB (primary) or JSONBin (fallback) ----
+async function initShipmentStore() {
+    // PRIORITY 1: MongoDB (your own database)
+    if (process.env.MONGODB_URI) {
+        var connected = await connectMongo();
+        if (connected) {
+            try {
+                var data = await mongoGetAll();
+                shipmentCache = data;
+                try { fs.writeFileSync(shipmentsFile, JSON.stringify(data, null, 2)); } catch(e) {}
+                console.log('  ✅ Loaded ' + data.length + ' shipments from MongoDB (YOUR permanent database)');
+                // Also backup to JSONBin
+                if (process.env.JSONBIN_API_KEY && process.env.JSONBIN_BIN_ID) {
+                    jsonBinPut(data).catch(() => {});
+                }
+                return;
+            } catch (e) {
+                console.error('  ❌ MongoDB read failed:', e.message);
+            }
         }
     } else {
-        console.error('  ⚠️  JSONBIN_API_KEY / JSONBIN_BIN_ID not set!');
-        console.error('  ⚠️  Shipments will be LOST on every Render redeploy!');
-        console.error('  ⚠️  Go to jsonbin.io, create a free bin, and set env vars in Render.');
+        console.log('  ⚠️  MONGODB_URI not set — MongoDB disabled');
     }
 
-    // Fallback to local file — but DON'T overwrite JSONBin with this data
+    // PRIORITY 2: JSONBin (backup)
+    if (process.env.JSONBIN_API_KEY && process.env.JSONBIN_BIN_ID) {
+        console.log('  [JSONBin] Trying backup storage...');
+        try {
+            var data = await jsonBinGet();
+            shipmentCache = data;
+            try { fs.writeFileSync(shipmentsFile, JSON.stringify(data, null, 2)); } catch(e) {}
+            console.log('  ✅ Loaded ' + data.length + ' shipments from JSONBin (backup)');
+            // If MongoDB is now connected, migrate data there
+            if (mongoHealthy && mongoCollection) {
+                try { await mongoSaveAll(data); console.log('  ✅ Migrated JSONBin data to MongoDB'); } catch(e) {}
+            }
+            return;
+        } catch (e) {
+            console.error('  ❌ JSONBin backup also failed:', e.message);
+        }
+    }
+
+    // PRIORITY 3: Local file (temporary only)
     try {
         shipmentCache = JSON.parse(fs.readFileSync(shipmentsFile, 'utf8'));
-        console.log('  [Local] Loaded ' + shipmentCache.length + ' shipments from local file (TEMPORARY — will be lost on redeploy)');
+        console.log('  ⚠️  Loaded ' + shipmentCache.length + ' shipments from local file (TEMPORARY)');
     } catch(e) {
         shipmentCache = [];
-        console.log('  [Local] No shipments found — starting empty');
+        console.log('  ⚠️  No shipments found — starting empty');
     }
 }
 
-// Periodic JSONBin backup — every 10 minutes, re-sync to JSONBin
-// This catches any saves that failed to sync
+// Periodic backup — every 10 minutes
 function startPeriodicBackup() {
-    if (!process.env.JSONBIN_API_KEY || !process.env.JSONBIN_BIN_ID) return;
-
     setInterval(async () => {
         if (!shipmentCache || shipmentCache.length === 0) return;
-        try {
-            await jsonBinPutWithRetry(shipmentCache);
-            console.log('  [JSONBin] Periodic backup: ' + shipmentCache.length + ' shipments synced');
-        } catch(e) {
-            jsonBinHealthy = false;
-            console.error('  ⚠️  [JSONBin] Periodic backup FAILED:', e.message);
+
+        // Sync to MongoDB 
+        if (mongoHealthy && mongoCollection) {
+            try {
+                await mongoSaveAll(shipmentCache);
+                console.log('  [MongoDB] Periodic sync: ' + shipmentCache.length + ' shipments OK');
+            } catch(e) {
+                mongoHealthy = false;
+                console.error('  ⚠️  [MongoDB] Periodic sync failed:', e.message);
+                // Try to reconnect
+                try { await connectMongo(); } catch(e2) {}
+            }
+        } else if (process.env.MONGODB_URI) {
+            // Try to reconnect if it was disconnected
+            console.log('  [MongoDB] Attempting reconnection...');
+            try {
+                var reconnected = await connectMongo();
+                if (reconnected) {
+                    await mongoSaveAll(shipmentCache);
+                    console.log('  ✅ [MongoDB] Reconnected and synced ' + shipmentCache.length + ' shipments');
+                }
+            } catch(e) {}
         }
-    }, 10 * 60 * 1000); // Every 10 minutes
+
+        // Backup to JSONBin
+        if (process.env.JSONBIN_API_KEY && process.env.JSONBIN_BIN_ID) {
+            try { await jsonBinPut(shipmentCache); } catch(e) { jsonBinHealthy = false; }
+        }
+    }, 10 * 60 * 1000);
 }
 
 // Initialize data files (NON-SHIPMENT files only)
@@ -1057,29 +1183,49 @@ app.post('/api/admin/ping-search-engines', verifyAdminToken, rateLimit(60000, 3)
 
 // Admin endpoint: check shipment storage health
 app.get('/api/admin/storage-health', verifyAdminToken, (req, res) => {
-    var hasEnvVars = !!(process.env.JSONBIN_API_KEY && process.env.JSONBIN_BIN_ID);
+    var hasMongo = !!process.env.MONGODB_URI;
+    var hasJsonBin = !!(process.env.JSONBIN_API_KEY && process.env.JSONBIN_BIN_ID);
+    var mode = 'LOCAL ONLY (will lose data on redeploy!)';
+    if (hasMongo && mongoHealthy) mode = 'MongoDB Atlas (YOUR permanent database)';
+    else if (hasMongo && !mongoHealthy) mode = 'MongoDB (ERROR — check connection)';
+    else if (hasJsonBin && jsonBinHealthy) mode = 'JSONBin backup (no MongoDB configured)';
+
     res.json({
-        jsonBinConfigured: hasEnvVars,
+        mongoConfigured: hasMongo,
+        mongoHealthy: mongoHealthy,
+        jsonBinConfigured: hasJsonBin,
         jsonBinHealthy: jsonBinHealthy,
-        lastSync: lastJsonBinSync ? new Date(lastJsonBinSync).toISOString() : 'never',
+        lastSync: lastDbSync ? new Date(lastDbSync).toISOString() : 'never',
         shipmentsInMemory: shipmentCache ? shipmentCache.length : 0,
-        storageMode: hasEnvVars ? (jsonBinHealthy ? 'JSONBin (persistent)' : 'JSONBin (ERROR - check logs)') : 'LOCAL ONLY (will lose data on redeploy!)'
+        storageMode: mode
     });
 });
 
-// Admin endpoint: force re-sync from JSONBin
+// Admin endpoint: force re-sync from database
 app.post('/api/admin/storage-resync', verifyAdminToken, rateLimit(60000, 3), async (req, res) => {
-    if (!process.env.JSONBIN_API_KEY || !process.env.JSONBIN_BIN_ID) {
-        return res.status(400).json({ error: 'JSONBin not configured' });
+    // Try MongoDB first
+    if (mongoHealthy && mongoCollection) {
+        try {
+            var data = await mongoGetAll();
+            shipmentCache = data;
+            try { fs.writeFileSync(shipmentsFile, JSON.stringify(data, null, 2)); } catch(e) {}
+            return res.json({ success: true, message: 'Reloaded ' + data.length + ' shipments from MongoDB', count: data.length, source: 'MongoDB' });
+        } catch(e) {
+            console.error('  Resync: MongoDB failed, trying JSONBin...', e.message);
+        }
     }
-    try {
-        var data = await jsonBinGetWithRetry();
-        shipmentCache = data;
-        try { fs.writeFileSync(shipmentsFile, JSON.stringify(data, null, 2)); } catch(e) {}
-        res.json({ success: true, message: 'Reloaded ' + data.length + ' shipments from JSONBin', count: data.length });
-    } catch(e) {
-        res.status(500).json({ error: 'JSONBin reload failed: ' + e.message });
+    // Fallback to JSONBin
+    if (process.env.JSONBIN_API_KEY && process.env.JSONBIN_BIN_ID) {
+        try {
+            var data = await jsonBinGet();
+            shipmentCache = data;
+            try { fs.writeFileSync(shipmentsFile, JSON.stringify(data, null, 2)); } catch(e) {}
+            return res.json({ success: true, message: 'Reloaded ' + data.length + ' shipments from JSONBin (backup)', count: data.length, source: 'JSONBin' });
+        } catch(e) {
+            return res.status(500).json({ error: 'Both MongoDB and JSONBin failed: ' + e.message });
+        }
     }
+    res.status(400).json({ error: 'No external storage configured (set MONGODB_URI or JSONBin env vars)' });
 });
 
 (async () => {
@@ -1105,18 +1251,26 @@ app.post('/api/admin/storage-resync', verifyAdminToken, rateLimit(60000, 3), asy
     ║  ✓ Admin Dashboard with Real-time Stats                     ║
     ║  ✓ Professional Email System (Nodemailer SMTP)              ║
     ║  ✓ Auto Search Engine Indexing (Google/Bing/Yandex)         ║
-    ║  ✓ Persistent Shipment Storage (JSONBin.io)                 ║
+    ║  ✓ MongoDB Atlas — YOUR Permanent Shipment Database         ║
+    ║  ✓ JSONBin.io Backup Storage                                ║
     ║                                                                ║
     ╚════════════════════════════════════════════════════════════════╝
     `);
 
     // Log storage status clearly
+    if (mongoHealthy) {
+        console.log('  ✅ Shipment storage: MongoDB Atlas (YOUR permanent database — survives ALL redeploys)');
+    } else if (process.env.MONGODB_URI) {
+        console.log('  ❌ MongoDB connection FAILED — check MONGODB_URI env var');
+    }
     if (jsonBinHealthy) {
-        console.log('  ✅ Shipment storage: JSONBin.io (PERSISTENT — survives redeploys)');
+        console.log('  ✅ JSONBin backup: Active');
     } else if (process.env.JSONBIN_API_KEY) {
-        console.log('  ❌ Shipment storage: JSONBin FAILED — check your JSONBIN_API_KEY and JSONBIN_BIN_ID');
-    } else {
-        console.log('  ⚠️  Shipment storage: LOCAL ONLY — data WILL be lost on redeploy!');
+        console.log('  ⚠️  JSONBin backup: FAILED — check JSONBIN_API_KEY and JSONBIN_BIN_ID');
+    }
+    if (!mongoHealthy && !jsonBinHealthy) {
+        console.log('  ⚠️  NO external storage! Shipments WILL be lost on redeploy!');
+        console.log('  ⚠️  Set MONGODB_URI in Render env vars for permanent storage.');
     }
 
     // Auto-ping search engines on every server start/deploy
