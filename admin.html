@@ -3656,40 +3656,57 @@
 
         function saveToHistory(shipmentData) {
             var history = JSON.parse(localStorage.getItem('toxShipmentHistory') || '[]');
+            // Prevent duplicates
+            if (history.some(function(h) { return h.id === shipmentData.id; })) return;
             history.unshift({
                 ...shipmentData,
                 createdAt: new Date().toISOString()
             });
-            localStorage.setItem('toxShipmentHistory', JSON.stringify(history));
+            try {
+                localStorage.setItem('toxShipmentHistory', JSON.stringify(history));
+            } catch(e) {
+                // localStorage quota — remove oldest to make room, keep at least last 500
+                while (history.length > 500) { history.pop(); }
+                try { localStorage.setItem('toxShipmentHistory', JSON.stringify(history)); } catch(e2) {}
+            }
         }
 
         async function loadHistory() {
-            var history = [];
-            // Load from server (all shipments)
+            // localStorage is the PERMANENT source of truth for history
+            var localHistory = JSON.parse(localStorage.getItem('toxShipmentHistory') || '[]');
+            var localIds = new Set(localHistory.map(function(s) { return s.id; }));
+
+            // Fetch server shipments — only to discover NEW ones not yet in local history
             try {
                 var res = await fetch('/api/admin/shipments', { headers: { 'x-admin-token': adminToken } });
                 if (res.ok) {
                     var serverShipments = await res.json();
-                    history = serverShipments.map(function(s) {
-                        return { ...s, createdAt: s.createdAt || s.pickupDate || '' };
+                    var added = false;
+                    serverShipments.forEach(function(s) {
+                        if (!localIds.has(s.id)) {
+                            localHistory.push({
+                                ...s,
+                                createdAt: s.createdAt || s.pickupDate || new Date().toISOString()
+                            });
+                            added = true;
+                        }
                     });
+                    // Persist any newly discovered server shipments into localStorage
+                    if (added) {
+                        try {
+                            localStorage.setItem('toxShipmentHistory', JSON.stringify(localHistory));
+                        } catch(e) {}
+                    }
                 }
             } catch(e) {}
 
-            // Merge local history (add any not on server)
-            var localHistory = JSON.parse(localStorage.getItem('toxShipmentHistory') || '[]');
-            var serverIds = new Set(history.map(function(s) { return s.id; }));
-            localHistory.forEach(function(s) {
-                if (!serverIds.has(s.id)) history.push(s);
-            });
-
             // Sort by createdAt descending
-            history.sort(function(a, b) {
+            localHistory.sort(function(a, b) {
                 return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
             });
 
-            allHistoryCache = history;
-            renderHistory(history);
+            allHistoryCache = localHistory;
+            renderHistory(localHistory);
         }
 
         function renderHistory(items) {
