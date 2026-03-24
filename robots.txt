@@ -12,5 +12,14 @@ Allow: /
 Disallow: /admin.html
 Disallow: /data/
 
+# Bingbot-specific
+User-agent: Bingbot
+Allow: /
+Disallow: /admin.html
+Disallow: /data/
+
 # Sitemap location
 Sitemap: https://toxexpress.org/sitemap.xml
+
+# IndexNow key for instant Bing/Yandex indexing
+# Key file: https://toxexpress.org/b7e4c2f8a1d9364e5f0c8b7a2d1e9f4c.txt

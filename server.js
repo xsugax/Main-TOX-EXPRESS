@@ -95,9 +95,87 @@ app.use((req, res, next) => {
     res.setHeader('X-DNS-Prefetch-Control', 'off');
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
 
+    // SEO: Tell search engines to index public pages
+    var reqPath = req.path.toLowerCase();
+    if (reqPath === '/' || (reqPath.endsWith('.html') && reqPath !== '/admin.html')) {
+        res.setHeader('X-Robots-Tag', 'index, follow, max-snippet:-1, max-image-preview:large');
+    } else if (reqPath === '/admin.html') {
+        res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+    }
+
     // No CSP - let Smartsupp load without any restrictions
     next();
 });
+
+// ==================== SEO: IndexNow & Search Engine Pinging ====================
+const INDEXNOW_KEY = 'b7e4c2f8a1d9364e5f0c8b7a2d1e9f4c';
+const SITE_URL = 'https://toxexpress.org';
+const ALL_URLS = [
+    SITE_URL + '/',
+    SITE_URL + '/tracking.html',
+    SITE_URL + '/dashboard.html',
+    SITE_URL + '/partners.html',
+    SITE_URL + '/privacy-policy.html',
+    SITE_URL + '/terms.html',
+    SITE_URL + '/cookie-policy.html'
+];
+
+// Serve IndexNow key verification file
+app.get('/' + INDEXNOW_KEY + '.txt', (req, res) => {
+    res.type('text/plain').send(INDEXNOW_KEY);
+});
+
+function pingSearchEngines() {
+    var sitemapUrl = encodeURIComponent(SITE_URL + '/sitemap.xml');
+
+    // 1. Ping Google sitemap
+    https.get('https://www.google.com/ping?sitemap=' + sitemapUrl, (resp) => {
+        var d = '';
+        resp.on('data', (c) => { d += c; });
+        resp.on('end', () => { console.log('  ✅ Google sitemap ping: HTTP ' + resp.statusCode); });
+    }).on('error', (e) => { console.log('  ⚠️  Google ping failed:', e.message); });
+
+    // 2. Ping Bing sitemap
+    https.get('https://www.bing.com/ping?sitemap=' + sitemapUrl, (resp) => {
+        var d = '';
+        resp.on('data', (c) => { d += c; });
+        resp.on('end', () => { console.log('  ✅ Bing sitemap ping: HTTP ' + resp.statusCode); });
+    }).on('error', (e) => { console.log('  ⚠️  Bing ping failed:', e.message); });
+
+    // 3. IndexNow — submit all URLs to Bing/Yandex for instant indexing
+    var indexNowPayload = JSON.stringify({
+        host: 'toxexpress.org',
+        key: INDEXNOW_KEY,
+        keyLocation: SITE_URL + '/' + INDEXNOW_KEY + '.txt',
+        urlList: ALL_URLS
+    });
+
+    var indexNowReq = https.request({
+        hostname: 'api.indexnow.org',
+        path: '/IndexNow',
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json; charset=utf-8',
+            'Content-Length': Buffer.byteLength(indexNowPayload)
+        }
+    }, (resp) => {
+        var d = '';
+        resp.on('data', (c) => { d += c; });
+        resp.on('end', () => { console.log('  ✅ IndexNow submission: HTTP ' + resp.statusCode + ' (' + ALL_URLS.length + ' URLs)'); });
+    });
+    indexNowReq.on('error', (e) => { console.log('  ⚠️  IndexNow failed:', e.message); });
+    indexNowReq.write(indexNowPayload);
+    indexNowReq.end();
+
+    // 4. Ping Yandex sitemap
+    https.get('https://webmaster.yandex.com/ping?sitemap=' + sitemapUrl, (resp) => {
+        var d = '';
+        resp.on('data', (c) => { d += c; });
+        resp.on('end', () => { console.log('  ✅ Yandex sitemap ping: HTTP ' + resp.statusCode); });
+    }).on('error', (e) => { console.log('  ⚠️  Yandex ping failed:', e.message); });
+
+    console.log('  🔍 Search engine pings sent for ' + SITE_URL);
+}
 
 // Middleware
 app.use(express.static(__dirname, {
@@ -872,6 +950,12 @@ app.post('/api/admin/send-email', verifyAdminToken, rateLimit(60000, 20), (req, 
 // Initialize and start server
 initializeDataFiles();
 
+// Admin endpoint: manually trigger search engine pings
+app.post('/api/admin/ping-search-engines', verifyToken, rateLimit(60000, 3), (req, res) => {
+    pingSearchEngines();
+    res.json({ success: true, message: 'Search engine pings sent for all ' + ALL_URLS.length + ' URLs' });
+});
+
 (async () => {
     await initShipmentStore();
     app.listen(PORT, () => {
@@ -890,8 +974,16 @@ initializeDataFiles();
     ║  ✓ Regulatory Audit Logs                                    ║
     ║  ✓ Admin Dashboard with Real-time Stats                     ║
     ║  ✓ Professional Email System (Nodemailer SMTP)              ║
+    ║  ✓ Auto Search Engine Indexing (Google/Bing/Yandex)         ║
     ║                                                                ║
     ╚════════════════════════════════════════════════════════════════╝
     `);
+
+    // Auto-ping search engines on every server start/deploy
+    console.log('  🔍 Pinging search engines for indexing...');
+    pingSearchEngines();
+
+    // Re-ping every 4 hours to keep indexing fresh
+    setInterval(pingSearchEngines, 4 * 60 * 60 * 1000);
     });
 })();
