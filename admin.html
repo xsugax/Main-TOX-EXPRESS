@@ -4721,29 +4721,57 @@
             return Array.from(checked).map(function(c) { return c.value; });
         }
 
-        function bulkUpdateStatus() {
+        async function bulkUpdateStatus() {
             var ids = getSelectedIds();
             if (ids.length === 0) return;
             var newStatus = prompt('Enter new status for ' + ids.length + ' shipment(s):\n(Processing, Loading, In Transit, In Flight, Customs Clearance, Out for Delivery, On Hold, Delayed, Delivered, Cancelled)');
             if (!newStatus) return;
             var valid = ['Processing', 'Loading', 'In Transit', 'In Flight', 'Customs Clearance', 'Out for Delivery', 'On Hold', 'Delayed', 'Delivered', 'Cancelled'];
             if (!valid.includes(newStatus)) { toast('Invalid status', 'error'); return; }
-            allShipmentsCache.forEach(function(s) {
-                if (ids.includes(s.id)) s.status = newStatus;
-            });
-            renderShipments(allShipmentsCache);
-            toast('Updated ' + ids.length + ' shipments to ' + newStatus, 'success');
-            addNotification('Bulk updated ' + ids.length + ' shipments to ' + newStatus);
+            try {
+                var res = await fetch('/api/admin/shipments/bulk-update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'x-admin-token': adminToken },
+                    body: JSON.stringify({ ids: ids, status: newStatus })
+                });
+                var data = await res.json();
+                if (res.ok && data.success) {
+                    toast('Updated ' + data.updated + ' shipments to ' + newStatus, 'success');
+                    addNotification('Bulk updated ' + data.updated + ' shipments to ' + newStatus);
+                    loadShipments();
+                } else {
+                    toast('Update failed: ' + (data.error || 'Unknown error'), 'error');
+                }
+            } catch(e) {
+                toast('Network error — try again', 'error');
+            }
         }
 
-        function bulkDelete() {
+        async function bulkDelete() {
             var ids = getSelectedIds();
             if (ids.length === 0) return;
-            if (!confirm('Delete ' + ids.length + ' selected shipment(s)? This cannot be undone.')) return;
-            allShipmentsCache = allShipmentsCache.filter(function(s) { return !ids.includes(s.id); });
-            renderShipments(allShipmentsCache);
-            toast('Deleted ' + ids.length + ' shipments', 'success');
-            addNotification('Deleted ' + ids.length + ' shipments');
+            if (!confirm('Permanently delete ' + ids.length + ' selected shipment(s)?\nThis removes them from the server — they will NOT come back.')) return;
+            try {
+                var res = await fetch('/api/admin/shipments/bulk-delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'x-admin-token': adminToken },
+                    body: JSON.stringify({ ids: ids })
+                });
+                var data = await res.json();
+                if (res.ok && data.success) {
+                    // Also remove from localStorage history
+                    var localHistory = JSON.parse(localStorage.getItem('toxShipmentHistory') || '[]');
+                    localHistory = localHistory.filter(function(s) { return !ids.includes(s.id); });
+                    localStorage.setItem('toxShipmentHistory', JSON.stringify(localHistory));
+                    toast('Permanently deleted ' + data.deleted + ' shipment(s)', 'success');
+                    addNotification('Deleted ' + data.deleted + ' shipments from server');
+                    loadShipments();
+                } else {
+                    toast('Delete failed: ' + (data.error || 'Unknown error'), 'error');
+                }
+            } catch(e) {
+                toast('Network error — try again', 'error');
+            }
         }
 
         // ==================== AUTO REFRESH ====================

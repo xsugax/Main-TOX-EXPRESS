@@ -1004,6 +1004,42 @@ app.post('/api/admin/shipments/:id/delivery', verifyAdminToken, (req, res) => {
     res.json({ success: true, message: `Shipment delivery updated` });
 });
 
+// Bulk delete shipments (permanently removes multiple at once)
+app.post('/api/admin/shipments/bulk-delete', verifyAdminToken, (req, res) => {
+    const ids = req.body.ids;
+    if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ error: 'ids array required' });
+    }
+    let shipments = getShipments();
+    const deleted = shipments.filter(s => ids.includes(s.id));
+    shipments = shipments.filter(s => !ids.includes(s.id));
+    shipmentCache = shipments;
+    saveShipments(shipments);
+    logAudit('BULK_DELETE', { count: deleted.length, ids: deleted.map(s => s.id) }, req.headers['x-admin-id'] || 'admin');
+    res.json({ success: true, deleted: deleted.length, remaining: shipments.length });
+});
+
+// Bulk update shipment status
+app.post('/api/admin/shipments/bulk-update', verifyAdminToken, (req, res) => {
+    const ids = req.body.ids;
+    const status = req.body.status;
+    const validStatuses = ['Processing', 'Loading', 'In Transit', 'In Flight', 'Customs Clearance', 'Out for Delivery', 'On Hold', 'Delayed', 'Delivered', 'Cancelled'];
+    if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ error: 'ids array required' });
+    }
+    if (!validStatuses.includes(status)) {
+        return res.status(400).json({ error: 'Invalid status' });
+    }
+    let shipments = getShipments();
+    let updated = 0;
+    shipments.forEach(s => {
+        if (ids.includes(s.id)) { s.status = status; updated++; }
+    });
+    saveShipments(shipments);
+    logAudit('BULK_UPDATE_STATUS', { count: updated, status, ids }, req.headers['x-admin-id'] || 'admin');
+    res.json({ success: true, updated });
+});
+
 // Create new shipment
 app.post('/api/admin/shipments', verifyAdminToken, (req, res) => {
     const body = sanitizeObj(req.body);
