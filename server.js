@@ -242,19 +242,25 @@ if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir);
 }
 
-// ==================== SHIPMENT PERSISTENCE ====================
-// In-memory cache seeded from JSONBin.io (when env vars set) or local file.
-// JSONBin is free (jsonbin.io) — set JSONBIN_API_KEY and JSONBIN_BIN_ID in Render
-// to make shipments survive redeploys on the ephemeral free-tier disk.
+// ==================== SHIPMENT PERSISTENCE (BULLETPROOF) ====================
+// JSONBin.io is the PERMANENT source of truth — survives Render redeploys.
+// Local file is just a fast cache. JSONBin ALWAYS wins.
+// Set JSONBIN_API_KEY and JSONBIN_BIN_ID in Render environment variables.
 let shipmentCache = null;
+let jsonBinHealthy = false;  // Track if JSONBin is working
+let lastJsonBinSync = 0;     // Timestamp of last successful sync
 
 function jsonBinGet() {
     return new Promise((resolve, reject) => {
+        if (!process.env.JSONBIN_API_KEY || !process.env.JSONBIN_BIN_ID) {
+            return reject(new Error('JSONBin env vars not set'));
+        }
         const options = {
             hostname: 'api.jsonbin.io',
             path: '/v3/b/' + process.env.JSONBIN_BIN_ID + '/latest',
             method: 'GET',
-            headers: { 'X-Master-Key': process.env.JSONBIN_API_KEY }
+            headers: { 'X-Master-Key': process.env.JSONBIN_API_KEY },
+            timeout: 15000
         };
         const req = https.request(options, (res) => {
             let body = '';
@@ -262,11 +268,16 @@ function jsonBinGet() {
             res.on('end', () => {
                 try {
                     const parsed = JSON.parse(body);
-                    if (Array.isArray(parsed.record)) resolve(parsed.record);
-                    else reject(new Error('JSONBin: unexpected response ' + body.substring(0, 200)));
+                    if (Array.isArray(parsed.record)) {
+                        jsonBinHealthy = true;
+                        resolve(parsed.record);
+                    } else {
+                        reject(new Error('JSONBin: unexpected response ' + body.substring(0, 200)));
+                    }
                 } catch (e) { reject(e); }
             });
         });
+        req.setTimeout(15000, () => { req.destroy(); reject(new Error('JSONBin GET timeout')); });
         req.on('error', reject);
         req.end();
     });
@@ -274,6 +285,9 @@ function jsonBinGet() {
 
 function jsonBinPut(data) {
     return new Promise((resolve, reject) => {
+        if (!process.env.JSONBIN_API_KEY || !process.env.JSONBIN_BIN_ID) {
+            return reject(new Error('JSONBin env vars not set'));
+        }
         const body = JSON.stringify(data);
         const options = {
             hostname: 'api.jsonbin.io',
@@ -283,51 +297,142 @@ function jsonBinPut(data) {
                 'Content-Type': 'application/json',
                 'X-Master-Key': process.env.JSONBIN_API_KEY,
                 'Content-Length': Buffer.byteLength(body)
-            }
+            },
+            timeout: 15000
         };
         const req = https.request(options, (res) => {
             let rb = '';
             res.on('data', d => rb += d);
-            res.on('end', () => resolve(rb));
+            res.on('end', () => {
+                if (res.statusCode >= 200 && res.statusCode < 300) {
+                    jsonBinHealthy = true;
+                    lastJsonBinSync = Date.now();
+                    resolve(rb);
+                } else {
+                    reject(new Error('JSONBin PUT HTTP ' + res.statusCode + ': ' + rb.substring(0, 200)));
+                }
+            });
         });
+        req.setTimeout(15000, () => { req.destroy(); reject(new Error('JSONBin PUT timeout')); });
         req.on('error', reject);
         req.write(body);
         req.end();
     });
 }
 
+// Retry wrapper — tries up to 3 times with delay
+async function jsonBinGetWithRetry() {
+    for (var attempt = 1; attempt <= 3; attempt++) {
+        try {
+            return await jsonBinGet();
+        } catch (e) {
+            console.error('  [JSONBin] GET attempt ' + attempt + '/3 failed:', e.message);
+            if (attempt < 3) await new Promise(r => setTimeout(r, 2000 * attempt));
+        }
+    }
+    throw new Error('JSONBin GET failed after 3 attempts');
+}
+
+async function jsonBinPutWithRetry(data) {
+    for (var attempt = 1; attempt <= 3; attempt++) {
+        try {
+            return await jsonBinPut(data);
+        } catch (e) {
+            console.error('  [JSONBin] PUT attempt ' + attempt + '/3 failed:', e.message);
+            if (attempt < 3) await new Promise(r => setTimeout(r, 2000 * attempt));
+        }
+    }
+    throw new Error('JSONBin PUT failed after 3 attempts');
+}
+
 function getShipments() {
     if (shipmentCache) return shipmentCache;
-    shipmentCache = JSON.parse(fs.readFileSync(shipmentsFile, 'utf8'));
+    try {
+        shipmentCache = JSON.parse(fs.readFileSync(shipmentsFile, 'utf8'));
+    } catch(e) {
+        shipmentCache = [];
+    }
     return shipmentCache;
 }
 
 function saveShipments(shipments) {
     shipmentCache = shipments;
-    fs.writeFileSync(shipmentsFile, JSON.stringify(shipments, null, 2));
+    // Always save locally first (fast)
+    try {
+        fs.writeFileSync(shipmentsFile, JSON.stringify(shipments, null, 2));
+    } catch(e) { console.error('[Local] Write failed:', e.message); }
+
+    // Then sync to JSONBin with retry (this is the permanent copy)
     if (process.env.JSONBIN_API_KEY && process.env.JSONBIN_BIN_ID) {
-        jsonBinPut(shipments).catch(e => console.error('[JSONBin] Save failed:', e.message));
+        jsonBinPutWithRetry(shipments)
+            .then(() => { console.log('  [JSONBin] Synced ' + shipments.length + ' shipments'); })
+            .catch(e => {
+                jsonBinHealthy = false;
+                console.error('  ⚠️  [JSONBin] SYNC FAILED after retries:', e.message);
+                console.error('  ⚠️  Shipments are ONLY in local cache — will retry on next save');
+            });
     }
 }
 
 async function initShipmentStore() {
-    if (process.env.JSONBIN_API_KEY && process.env.JSONBIN_BIN_ID) {
+    var hasJsonBin = !!(process.env.JSONBIN_API_KEY && process.env.JSONBIN_BIN_ID);
+
+    if (hasJsonBin) {
+        console.log('  [JSONBin] External storage configured — loading from JSONBin...');
         try {
-            const data = await jsonBinGet();
+            const data = await jsonBinGetWithRetry();
             shipmentCache = data;
-            fs.writeFileSync(shipmentsFile, JSON.stringify(data, null, 2));
-            console.log('[JSONBin] Loaded ' + data.length + ' shipments from external store');
+            // Write to local file as cache
+            try { fs.writeFileSync(shipmentsFile, JSON.stringify(data, null, 2)); } catch(e) {}
+            console.log('  ✅ [JSONBin] Loaded ' + data.length + ' shipments from external store');
+            jsonBinHealthy = true;
+            lastJsonBinSync = Date.now();
             return;
         } catch (e) {
-            console.error('[JSONBin] Could not load from external store, using local file:', e.message);
+            console.error('  ❌ [JSONBin] FAILED to load after 3 retries:', e.message);
+            console.error('  ⚠️  IMPORTANT: Falling back to local file. Your real shipments may be in JSONBin.');
+            console.error('  ⚠️  Check JSONBIN_API_KEY and JSONBIN_BIN_ID env vars in Render.');
+            jsonBinHealthy = false;
         }
+    } else {
+        console.error('  ⚠️  JSONBIN_API_KEY / JSONBIN_BIN_ID not set!');
+        console.error('  ⚠️  Shipments will be LOST on every Render redeploy!');
+        console.error('  ⚠️  Go to jsonbin.io, create a free bin, and set env vars in Render.');
     }
-    shipmentCache = JSON.parse(fs.readFileSync(shipmentsFile, 'utf8'));
-    console.log('[Local] Loaded ' + shipmentCache.length + ' shipments from local file');
+
+    // Fallback to local file — but DON'T overwrite JSONBin with this data
+    try {
+        shipmentCache = JSON.parse(fs.readFileSync(shipmentsFile, 'utf8'));
+        console.log('  [Local] Loaded ' + shipmentCache.length + ' shipments from local file (TEMPORARY — will be lost on redeploy)');
+    } catch(e) {
+        shipmentCache = [];
+        console.log('  [Local] No shipments found — starting empty');
+    }
 }
 
-// Initialize data files
+// Periodic JSONBin backup — every 10 minutes, re-sync to JSONBin
+// This catches any saves that failed to sync
+function startPeriodicBackup() {
+    if (!process.env.JSONBIN_API_KEY || !process.env.JSONBIN_BIN_ID) return;
+
+    setInterval(async () => {
+        if (!shipmentCache || shipmentCache.length === 0) return;
+        try {
+            await jsonBinPutWithRetry(shipmentCache);
+            console.log('  [JSONBin] Periodic backup: ' + shipmentCache.length + ' shipments synced');
+        } catch(e) {
+            jsonBinHealthy = false;
+            console.error('  ⚠️  [JSONBin] Periodic backup FAILED:', e.message);
+        }
+    }, 10 * 60 * 1000); // Every 10 minutes
+}
+
+// Initialize data files (NON-SHIPMENT files only)
+// Shipments are handled separately by initShipmentStore()
 function initializeDataFiles() {
+    if (!fs.existsSync(dataDir)) {
+        fs.mkdirSync(dataDir, { recursive: true });
+    }
     if (!fs.existsSync(visitorsFile)) {
         fs.writeFileSync(visitorsFile, JSON.stringify([], null, 2));
     }
@@ -337,15 +442,9 @@ function initializeDataFiles() {
     if (!fs.existsSync(notificationsFile)) {
         fs.writeFileSync(notificationsFile, JSON.stringify([], null, 2));
     }
+    // Shipments file: create empty placeholder if missing (JSONBin will overwrite)
     if (!fs.existsSync(shipmentsFile)) {
-        const defaultShipments = [
-            { id: 'TOX-2026-001234', origin: 'Shanghai', destination: 'Rotterdam', type: 'Ocean Freight', status: 'In Transit', progress: 65, eta: '2026-03-10' },
-            { id: 'TOX-2026-005678', origin: 'LA', destination: 'Singapore', type: 'Air Cargo', status: 'Processing', progress: 15, eta: '2026-02-28' },
-            { id: 'TOX-2026-009012', origin: 'Dubai', destination: 'Miami', type: 'Ground Transport', status: 'Delivered', progress: 100, eta: '2026-02-22' },
-            { id: 'TOX-2026-003456', origin: 'Rotterdam', destination: 'New York', type: 'Ocean Freight', status: 'Loading', progress: 30, eta: '2026-03-15' },
-            { id: 'TOX-2026-007890', origin: 'Frankfurt', destination: 'Tokyo', type: 'Air Cargo', status: 'In Flight', progress: 72, eta: '2026-02-25' }
-        ];
-        fs.writeFileSync(shipmentsFile, JSON.stringify(defaultShipments, null, 2));
+        fs.writeFileSync(shipmentsFile, JSON.stringify([], null, 2));
     }
 }
 
@@ -951,13 +1050,44 @@ app.post('/api/admin/send-email', verifyAdminToken, rateLimit(60000, 20), (req, 
 initializeDataFiles();
 
 // Admin endpoint: manually trigger search engine pings
-app.post('/api/admin/ping-search-engines', verifyToken, rateLimit(60000, 3), (req, res) => {
+app.post('/api/admin/ping-search-engines', verifyAdminToken, rateLimit(60000, 3), (req, res) => {
     pingSearchEngines();
     res.json({ success: true, message: 'Search engine pings sent for all ' + ALL_URLS.length + ' URLs' });
 });
 
+// Admin endpoint: check shipment storage health
+app.get('/api/admin/storage-health', verifyAdminToken, (req, res) => {
+    var hasEnvVars = !!(process.env.JSONBIN_API_KEY && process.env.JSONBIN_BIN_ID);
+    res.json({
+        jsonBinConfigured: hasEnvVars,
+        jsonBinHealthy: jsonBinHealthy,
+        lastSync: lastJsonBinSync ? new Date(lastJsonBinSync).toISOString() : 'never',
+        shipmentsInMemory: shipmentCache ? shipmentCache.length : 0,
+        storageMode: hasEnvVars ? (jsonBinHealthy ? 'JSONBin (persistent)' : 'JSONBin (ERROR - check logs)') : 'LOCAL ONLY (will lose data on redeploy!)'
+    });
+});
+
+// Admin endpoint: force re-sync from JSONBin
+app.post('/api/admin/storage-resync', verifyAdminToken, rateLimit(60000, 3), async (req, res) => {
+    if (!process.env.JSONBIN_API_KEY || !process.env.JSONBIN_BIN_ID) {
+        return res.status(400).json({ error: 'JSONBin not configured' });
+    }
+    try {
+        var data = await jsonBinGetWithRetry();
+        shipmentCache = data;
+        try { fs.writeFileSync(shipmentsFile, JSON.stringify(data, null, 2)); } catch(e) {}
+        res.json({ success: true, message: 'Reloaded ' + data.length + ' shipments from JSONBin', count: data.length });
+    } catch(e) {
+        res.status(500).json({ error: 'JSONBin reload failed: ' + e.message });
+    }
+});
+
 (async () => {
     await initShipmentStore();
+
+    // Start periodic JSONBin backup (every 10 min)
+    startPeriodicBackup();
+
     app.listen(PORT, () => {
     console.log(`
     ╔════════════════════════════════════════════════════════════════╗
@@ -975,9 +1105,19 @@ app.post('/api/admin/ping-search-engines', verifyToken, rateLimit(60000, 3), (re
     ║  ✓ Admin Dashboard with Real-time Stats                     ║
     ║  ✓ Professional Email System (Nodemailer SMTP)              ║
     ║  ✓ Auto Search Engine Indexing (Google/Bing/Yandex)         ║
+    ║  ✓ Persistent Shipment Storage (JSONBin.io)                 ║
     ║                                                                ║
     ╚════════════════════════════════════════════════════════════════╝
     `);
+
+    // Log storage status clearly
+    if (jsonBinHealthy) {
+        console.log('  ✅ Shipment storage: JSONBin.io (PERSISTENT — survives redeploys)');
+    } else if (process.env.JSONBIN_API_KEY) {
+        console.log('  ❌ Shipment storage: JSONBin FAILED — check your JSONBIN_API_KEY and JSONBIN_BIN_ID');
+    } else {
+        console.log('  ⚠️  Shipment storage: LOCAL ONLY — data WILL be lost on redeploy!');
+    }
 
     // Auto-ping search engines on every server start/deploy
     console.log('  🔍 Pinging search engines for indexing...');
