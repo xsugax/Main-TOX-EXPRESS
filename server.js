@@ -395,6 +395,29 @@ function jsonBinPut(data) {
     });
 }
 
+// ---- JSONBin Retry Wrappers ----
+async function jsonBinGetWithRetry() {
+    for (var attempt = 1; attempt <= 3; attempt++) {
+        try { return await jsonBinGet(); }
+        catch (e) {
+            console.error('  [JSONBin] GET attempt ' + attempt + '/3 failed:', e.message);
+            if (attempt < 3) await new Promise(r => setTimeout(r, 2000 * attempt));
+        }
+    }
+    throw new Error('JSONBin GET failed after 3 attempts');
+}
+
+async function jsonBinPutWithRetry(data) {
+    for (var attempt = 1; attempt <= 3; attempt++) {
+        try { return await jsonBinPut(data); }
+        catch (e) {
+            console.error('  [JSONBin] PUT attempt ' + attempt + '/3 failed:', e.message);
+            if (attempt < 3) await new Promise(r => setTimeout(r, 2000 * attempt));
+        }
+    }
+    throw new Error('JSONBin PUT failed after 3 attempts');
+}
+
 // ---- Core Storage Functions (used by all endpoints) ----
 function getShipments() {
     if (shipmentCache) return shipmentCache;
@@ -418,9 +441,11 @@ function saveShipments(shipments) {
             .catch(e => { mongoHealthy = false; console.error('  ⚠️  [MongoDB] Save failed:', e.message); });
     }
 
-    // 3. Backup to JSONBin (SECONDARY backup)
+    // 3. Backup to JSONBin (with retry for reliability)
     if (process.env.JSONBIN_API_KEY && process.env.JSONBIN_BIN_ID) {
-        jsonBinPut(shipments).catch(e => { jsonBinHealthy = false; });
+        jsonBinPutWithRetry(shipments)
+            .then(() => { console.log('  [JSONBin] Synced ' + shipments.length + ' shipments'); })
+            .catch(e => { jsonBinHealthy = false; console.error('  ⚠️  [JSONBin] Sync failed:', e.message); });
     }
 }
 
@@ -448,7 +473,7 @@ function saveShipmentInsert(shipment) {
         });
     }
     if (process.env.JSONBIN_API_KEY && process.env.JSONBIN_BIN_ID) {
-        jsonBinPut(shipmentCache).catch(() => {});
+        jsonBinPutWithRetry(shipmentCache).catch(() => {});
     }
 }
 
@@ -462,7 +487,7 @@ function saveShipmentDelete(shipmentId) {
         });
     }
     if (process.env.JSONBIN_API_KEY && process.env.JSONBIN_BIN_ID) {
-        jsonBinPut(shipmentCache).catch(() => {});
+        jsonBinPutWithRetry(shipmentCache).catch(() => {});
     }
 }
 
@@ -490,11 +515,11 @@ async function initShipmentStore() {
         console.log('  ⚠️  MONGODB_URI not set — MongoDB disabled');
     }
 
-    // PRIORITY 2: JSONBin (backup)
+    // PRIORITY 2: JSONBin (with retry — reliable even without MongoDB)
     if (process.env.JSONBIN_API_KEY && process.env.JSONBIN_BIN_ID) {
-        console.log('  [JSONBin] Trying backup storage...');
+        console.log('  [JSONBin] Loading from permanent storage (3 retries)...');
         try {
-            var data = await jsonBinGet();
+            var data = await jsonBinGetWithRetry();
             shipmentCache = data;
             try { fs.writeFileSync(shipmentsFile, JSON.stringify(data, null, 2)); } catch(e) {}
             console.log('  ✅ Loaded ' + data.length + ' shipments from JSONBin (backup)');
@@ -546,9 +571,12 @@ function startPeriodicBackup() {
             } catch(e) {}
         }
 
-        // Backup to JSONBin
+        // Backup to JSONBin (with retry)
         if (process.env.JSONBIN_API_KEY && process.env.JSONBIN_BIN_ID) {
-            try { await jsonBinPut(shipmentCache); } catch(e) { jsonBinHealthy = false; }
+            try {
+                await jsonBinPutWithRetry(shipmentCache);
+                console.log('  [JSONBin] Periodic backup: ' + shipmentCache.length + ' shipments synced');
+            } catch(e) { jsonBinHealthy = false; }
         }
     }, 10 * 60 * 1000);
 }
@@ -1217,10 +1245,10 @@ app.post('/api/admin/storage-resync', verifyAdminToken, rateLimit(60000, 3), asy
     // Fallback to JSONBin
     if (process.env.JSONBIN_API_KEY && process.env.JSONBIN_BIN_ID) {
         try {
-            var data = await jsonBinGet();
+            var data = await jsonBinGetWithRetry();
             shipmentCache = data;
             try { fs.writeFileSync(shipmentsFile, JSON.stringify(data, null, 2)); } catch(e) {}
-            return res.json({ success: true, message: 'Reloaded ' + data.length + ' shipments from JSONBin (backup)', count: data.length, source: 'JSONBin' });
+            return res.json({ success: true, message: 'Reloaded ' + data.length + ' shipments from JSONBin', count: data.length, source: 'JSONBin' });
         } catch(e) {
             return res.status(500).json({ error: 'Both MongoDB and JSONBin failed: ' + e.message });
         }
