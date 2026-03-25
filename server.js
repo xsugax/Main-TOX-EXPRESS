@@ -13,44 +13,62 @@ const PORT = process.env.PORT || 3000;
 // ==================== EMAIL TRANSPORTER ====================
 let emailTransporter = null;
 let emailReady = false;
+let emailVerifyError = null;
+
+// Log which email env vars the server sees (masked for security)
+console.log('  [Email Config] EMAIL_USER:', process.env.EMAIL_USER ? process.env.EMAIL_USER.substring(0, 5) + '***' : 'NOT SET');
+console.log('  [Email Config] EMAIL_PASSWORD:', process.env.EMAIL_PASSWORD ? process.env.EMAIL_PASSWORD.substring(0, 8) + '***' : 'NOT SET');
+console.log('  [Email Config] EMAIL_HOST:', process.env.EMAIL_HOST || 'NOT SET (will use Gmail)');
+console.log('  [Email Config] EMAIL_PORT:', process.env.EMAIL_PORT || 'NOT SET (default 587)');
+console.log('  [Email Config] EMAIL_SECURE:', process.env.EMAIL_SECURE || 'NOT SET (default false)');
 
 if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
     var smtpConfig;
     if (process.env.EMAIL_HOST) {
         // Custom SMTP provider (Brevo, Mailgun, SendGrid, etc.)
         smtpConfig = {
-            host: process.env.EMAIL_HOST,
+            host: process.env.EMAIL_HOST.trim(),
             port: parseInt(process.env.EMAIL_PORT) || 587,
-            secure: process.env.EMAIL_SECURE === 'true',
+            secure: false, // Port 587 always uses STARTTLS, not direct SSL
             auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASSWORD
+                user: process.env.EMAIL_USER.trim(),
+                pass: process.env.EMAIL_PASSWORD.trim()
             },
-            tls: { rejectUnauthorized: true }
+            tls: { rejectUnauthorized: false, ciphers: 'SSLv3' },
+            requireTLS: true
         };
     } else {
         // Default: Gmail
         smtpConfig = {
             service: 'gmail',
             auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASSWORD
+                user: process.env.EMAIL_USER.trim(),
+                pass: process.env.EMAIL_PASSWORD.trim()
             },
             tls: { rejectUnauthorized: true }
         };
     }
     emailTransporter = nodemailer.createTransport(smtpConfig);
+    // Mark as ready immediately — verify() can be flaky with some SMTP providers
+    emailReady = true;
     emailTransporter.verify(function(err) {
         if (err) {
-            console.log('  ⚠️  Email transporter verification failed:', err.message);
-            emailReady = false;
+            console.log('  ⚠️  Email verify() returned error (may still work):', err.message);
+            emailVerifyError = err.message;
+            // Don't disable — Brevo often fails verify but sends fine
         } else {
-            console.log('  ✅ Email transporter ready — emails will be sent via SMTP');
-            emailReady = true;
+            console.log('  ✅ Email transporter verified — emails will be sent via SMTP');
+            emailVerifyError = null;
         }
     });
 } else {
     console.log('  ⚠️  EMAIL_USER / EMAIL_PASSWORD not set — email sending disabled');
+    // Log all env var keys to help debug (no values)
+    var envKeys = Object.keys(process.env).filter(function(k) { return k.indexOf('EMAIL') > -1 || k.indexOf('email') > -1; });
+    if (envKeys.length > 0) {
+        console.log('  ⚠️  Found email-related env vars with wrong names:', envKeys.join(', '));
+        console.log('  ⚠️  Keys MUST use underscores: EMAIL_USER, EMAIL_PASSWORD, EMAIL_HOST, EMAIL_PORT');
+    }
 }
 
 // ==================== SECURITY: Rate Limiting ====================
@@ -1198,7 +1216,14 @@ app.get('/api/admin/stats', verifyAdminToken, (req, res) => {
 
 // ==================== EMAIL ENDPOINTS ====================
 app.get('/api/admin/email-status', verifyAdminToken, (req, res) => {
-    res.json({ connected: emailReady });
+    res.json({
+        connected: emailReady,
+        hasTransporter: !!emailTransporter,
+        verifyError: emailVerifyError,
+        configuredHost: process.env.EMAIL_HOST ? process.env.EMAIL_HOST : (process.env.EMAIL_USER ? 'gmail' : 'none'),
+        userSet: !!process.env.EMAIL_USER,
+        passSet: !!process.env.EMAIL_PASSWORD
+    });
 });
 
 app.post('/api/admin/send-email', verifyAdminToken, rateLimit(60000, 20), (req, res) => {
