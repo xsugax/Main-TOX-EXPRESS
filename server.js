@@ -10,35 +10,43 @@ const { MongoClient } = require('mongodb');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ==================== EMAIL TRANSPORTER ====================
-let emailTransporter = null;
+// ==================== EMAIL SETUP ====================
 let emailReady = false;
 let emailVerifyError = null;
+let emailMode = 'none'; // 'brevo-api', 'smtp', or 'none'
 
-// Log which email env vars the server sees (masked for security)
+// Brevo HTTP API key (preferred — bypasses SMTP port blocks)
+const BREVO_API_KEY = process.env.EMAIL_PASSWORD; // Brevo xsmtpsib key works for both SMTP and API
+const EMAIL_SENDER = process.env.EMAIL_USER || process.env.EMAIL_FROM;
+
 console.log('  [Email Config] EMAIL_USER:', process.env.EMAIL_USER ? process.env.EMAIL_USER.substring(0, 5) + '***' : 'NOT SET');
 console.log('  [Email Config] EMAIL_PASSWORD:', process.env.EMAIL_PASSWORD ? process.env.EMAIL_PASSWORD.substring(0, 8) + '***' : 'NOT SET');
-console.log('  [Email Config] EMAIL_HOST:', process.env.EMAIL_HOST || 'NOT SET (will use Gmail)');
-console.log('  [Email Config] EMAIL_PORT:', process.env.EMAIL_PORT || 'NOT SET (default 587)');
-console.log('  [Email Config] EMAIL_SECURE:', process.env.EMAIL_SECURE || 'NOT SET (default false)');
+console.log('  [Email Config] EMAIL_HOST:', process.env.EMAIL_HOST || 'NOT SET');
 
-if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
+if (BREVO_API_KEY && EMAIL_SENDER && process.env.EMAIL_HOST && process.env.EMAIL_HOST.includes('brevo')) {
+    // Use Brevo HTTP API (port 443) — more reliable than SMTP on cloud hosts
+    emailMode = 'brevo-api';
+    emailReady = true;
+    console.log('  ✅ Email configured via Brevo HTTP API (HTTPS — no SMTP port needed)');
+} else if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
+    // Fallback to SMTP
+    emailMode = 'smtp';
     var smtpConfig;
     if (process.env.EMAIL_HOST) {
-        // Custom SMTP provider (Brevo, Mailgun, SendGrid, etc.)
         smtpConfig = {
             host: process.env.EMAIL_HOST.trim(),
             port: parseInt(process.env.EMAIL_PORT) || 587,
-            secure: false, // Port 587 always uses STARTTLS, not direct SSL
+            secure: (parseInt(process.env.EMAIL_PORT) || 587) === 465,
             auth: {
                 user: process.env.EMAIL_USER.trim(),
                 pass: process.env.EMAIL_PASSWORD.trim()
             },
-            tls: { rejectUnauthorized: false, ciphers: 'SSLv3' },
-            requireTLS: true
+            tls: { rejectUnauthorized: false },
+            connectionTimeout: 10000,
+            greetingTimeout: 10000,
+            socketTimeout: 15000
         };
     } else {
-        // Default: Gmail
         smtpConfig = {
             service: 'gmail',
             auth: {
@@ -48,27 +56,65 @@ if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
             tls: { rejectUnauthorized: true }
         };
     }
-    emailTransporter = nodemailer.createTransport(smtpConfig);
-    // Mark as ready immediately — verify() can be flaky with some SMTP providers
+    var emailTransporter = nodemailer.createTransport(smtpConfig);
     emailReady = true;
     emailTransporter.verify(function(err) {
         if (err) {
-            console.log('  ⚠️  Email verify() returned error (may still work):', err.message);
+            console.log('  ⚠️  SMTP verify error (trying Brevo API fallback):', err.message);
             emailVerifyError = err.message;
-            // Don't disable — Brevo often fails verify but sends fine
+            // If SMTP fails but we have Brevo key, switch to API mode
+            if (BREVO_API_KEY && EMAIL_SENDER) {
+                emailMode = 'brevo-api';
+                console.log('  ↪ Switched to Brevo HTTP API mode');
+            }
         } else {
-            console.log('  ✅ Email transporter verified — emails will be sent via SMTP');
+            console.log('  ✅ SMTP transporter verified');
             emailVerifyError = null;
         }
     });
 } else {
     console.log('  ⚠️  EMAIL_USER / EMAIL_PASSWORD not set — email sending disabled');
-    // Log all env var keys to help debug (no values)
     var envKeys = Object.keys(process.env).filter(function(k) { return k.indexOf('EMAIL') > -1 || k.indexOf('email') > -1; });
     if (envKeys.length > 0) {
         console.log('  ⚠️  Found email-related env vars with wrong names:', envKeys.join(', '));
-        console.log('  ⚠️  Keys MUST use underscores: EMAIL_USER, EMAIL_PASSWORD, EMAIL_HOST, EMAIL_PORT');
     }
+}
+
+// Brevo HTTP API send function (uses HTTPS, no SMTP port needed)
+async function sendViaBrevoAPI(to, subject, htmlContent, senderEmail) {
+    const https = require('https');
+    const postData = JSON.stringify({
+        sender: { name: 'TOX Express', email: senderEmail },
+        to: [{ email: to }],
+        subject: subject,
+        htmlContent: htmlContent
+    });
+    return new Promise(function(resolve, reject) {
+        const req = https.request({
+            hostname: 'api.brevo.com',
+            path: '/v3/smtp/email',
+            method: 'POST',
+            headers: {
+                'accept': 'application/json',
+                'api-key': BREVO_API_KEY,
+                'content-type': 'application/json',
+                'content-length': Buffer.byteLength(postData)
+            }
+        }, function(res) {
+            var body = '';
+            res.on('data', function(chunk) { body += chunk; });
+            res.on('end', function() {
+                if (res.statusCode >= 200 && res.statusCode < 300) {
+                    resolve({ messageId: JSON.parse(body).messageId || 'sent' });
+                } else {
+                    reject(new Error('Brevo API ' + res.statusCode + ': ' + body));
+                }
+            });
+        });
+        req.on('error', function(e) { reject(e); });
+        req.write(postData);
+        req.end();
+    });
 }
 
 // ==================== SECURITY: Rate Limiting ====================
@@ -1218,17 +1264,17 @@ app.get('/api/admin/stats', verifyAdminToken, (req, res) => {
 app.get('/api/admin/email-status', verifyAdminToken, (req, res) => {
     res.json({
         connected: emailReady,
-        hasTransporter: !!emailTransporter,
+        mode: emailMode,
         verifyError: emailVerifyError,
-        configuredHost: process.env.EMAIL_HOST ? process.env.EMAIL_HOST : (process.env.EMAIL_USER ? 'gmail' : 'none'),
+        configuredHost: process.env.EMAIL_HOST || 'none',
         userSet: !!process.env.EMAIL_USER,
         passSet: !!process.env.EMAIL_PASSWORD
     });
 });
 
 app.post('/api/admin/send-email', verifyAdminToken, rateLimit(60000, 20), (req, res) => {
-    if (!emailReady || !emailTransporter) {
-        return res.status(503).json({ success: false, error: 'Email server not configured. Set EMAIL_USER and EMAIL_PASSWORD in .env' });
+    if (!emailReady) {
+        return res.status(503).json({ success: false, error: 'Email server not configured. Set EMAIL_USER and EMAIL_PASSWORD in environment variables.' });
     }
 
     var to = req.body.to;
@@ -1249,47 +1295,57 @@ app.post('/api/admin/send-email', verifyAdminToken, rateLimit(60000, 20), (req, 
     // Strip any script tags from HTML for safety
     var safeHtml = html.replace(/<script[\s\S]*?<\/script>/gi, '');
 
-    // Generate plain text version for anti-spam compliance
-    var plainText = 'Dear ' + (clientName || 'Valued Client') + ',\n\n' +
-        safeHtml.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&bull;/g, '•').replace(/&copy;/g, '©').substring(0, 4000) +
-        '\n\n---\nTOX Express Delivery Services\n500 TOX Tower, Marina Boulevard, Singapore 018989\nthetoxexpressdeliveryservices@gmail.com | +1-800-TOX-SHIP\nhttps://toxexpress.org';
-
-    var fromAddr = process.env.EMAIL_FROM || ('"TOX Express" <' + process.env.EMAIL_USER + '>');
-    var mailOptions = {
-        from: fromAddr,
-        to: to,
-        subject: subject,
-        html: safeHtml,
-        text: plainText,
-        replyTo: process.env.EMAIL_REPLY_TO || process.env.EMAIL_USER,
-        headers: {
-            'X-Mailer': 'TOX Express Logistics',
-            'Organization': 'TOX Express Delivery Services',
-            'List-Unsubscribe': '<mailto:' + process.env.EMAIL_USER + '?subject=Unsubscribe>',
-            'Precedence': 'bulk'
-        }
-    };
-
-    emailTransporter.sendMail(mailOptions, function(err, info) {
-        if (err) {
-            console.error('Email send error:', err.message);
-            return res.status(500).json({ success: false, error: 'Failed to send: ' + err.message });
-        }
-
-        // Audit log the email send
+    function logEmailAudit(success) {
         try {
             var auditLog = JSON.parse(fs.readFileSync(auditLogFile, 'utf8'));
             auditLog.push({
                 action: 'email_sent',
-                details: 'Email sent to ' + to + ' — Subject: ' + subject + (shipmentId ? ' [' + shipmentId + ']' : ''),
+                details: (success ? 'Email sent' : 'Email failed') + ' to ' + to + ' — Subject: ' + subject + (shipmentId ? ' [' + shipmentId + ']' : ''),
                 timestamp: new Date().toISOString(),
                 ip: req.ip || req.connection.remoteAddress
             });
             fs.writeFileSync(auditLogFile, JSON.stringify(auditLog, null, 2));
-        } catch(e) { /* audit log write failed — non-critical */ }
+        } catch(e) { /* non-critical */ }
+    }
 
-        res.json({ success: true, messageId: info.messageId });
-    });
+    if (emailMode === 'brevo-api') {
+        // Send via Brevo HTTP API (HTTPS port 443 — always works)
+        sendViaBrevoAPI(to, subject, safeHtml, EMAIL_SENDER)
+            .then(function(info) {
+                logEmailAudit(true);
+                res.json({ success: true, messageId: info.messageId, mode: 'brevo-api' });
+            })
+            .catch(function(err) {
+                console.error('Brevo API send error:', err.message);
+                logEmailAudit(false);
+                res.status(500).json({ success: false, error: 'Failed to send: ' + err.message });
+            });
+    } else if (emailMode === 'smtp' && typeof emailTransporter !== 'undefined' && emailTransporter) {
+        // Send via SMTP
+        var fromAddr = process.env.EMAIL_FROM || ('"TOX Express" <' + process.env.EMAIL_USER + '>');
+        var plainText = 'Dear ' + (clientName || 'Valued Client') + ',\n\n' +
+            safeHtml.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').substring(0, 4000) +
+            '\n\n---\nTOX Express Delivery Services\nhttps://toxexpress.org';
+        var mailOptions = {
+            from: fromAddr,
+            to: to,
+            subject: subject,
+            html: safeHtml,
+            text: plainText,
+            replyTo: process.env.EMAIL_REPLY_TO || process.env.EMAIL_USER
+        };
+        emailTransporter.sendMail(mailOptions, function(err, info) {
+            if (err) {
+                console.error('SMTP send error:', err.message);
+                logEmailAudit(false);
+                return res.status(500).json({ success: false, error: 'Failed to send: ' + err.message });
+            }
+            logEmailAudit(true);
+            res.json({ success: true, messageId: info.messageId, mode: 'smtp' });
+        });
+    } else {
+        res.status(503).json({ success: false, error: 'No email transport available' });
+    }
 });
 
 // Initialize and start server
