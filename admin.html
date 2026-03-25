@@ -3173,27 +3173,21 @@
         async function loadShipments() {
             try {
                 const res = await fetch('/api/admin/shipments', { headers: { 'x-admin-token': adminToken } });
+                if (!res.ok) throw new Error('Server returned ' + res.status);
                 const shipments = await res.json();
                 renderShipments(shipments);
                 renderOverviewShipments(shipments.slice(0, 5));
                 return shipments;
             } catch(e) {
-                const demo = getDemoShipments();
-                renderShipments(demo);
-                renderOverviewShipments(demo.slice(0, 5));
-                return demo;
+                console.error('Failed to load shipments:', e.message);
+                toast('Could not load shipments from server. Check your connection.', 'error');
+                renderShipments([]);
+                renderOverviewShipments([]);
+                return [];
             }
         }
 
-        function getDemoShipments() {
-            return [
-                { id: 'TOX-2026-001234', origin: 'Shanghai', destination: 'Rotterdam', type: 'Ocean Freight', status: 'In Transit', progress: 67, eta: '2026-03-28' },
-                { id: 'TOX-2026-001235', origin: 'Dubai', destination: 'London', type: 'Air Cargo', status: 'In Flight', progress: 45, eta: '2026-03-16' },
-                { id: 'TOX-2026-001236', origin: 'Los Angeles', destination: 'Tokyo', type: 'Ocean Freight', status: 'Processing', progress: 10, eta: '2026-04-05' },
-                { id: 'TOX-2026-001237', origin: 'Singapore', destination: 'Sydney', type: 'Express', status: 'Delivered', progress: 100, eta: '2026-03-12' },
-                { id: 'TOX-2026-001238', origin: 'Hamburg', destination: 'New York', type: 'Ocean Freight', status: 'In Transit', progress: 82, eta: '2026-03-20' }
-            ];
-        }
+        // No demo shipments — server is the single source of truth
 
         function getStatusBadge(status) {
             const safe = escHtml(status);
@@ -3391,9 +3385,7 @@
                     select.innerHTML += '<option value="' + escHtml(s.id) + '">' + escHtml(s.id) + ' (' + escHtml(s.origin) + '  ' + escHtml(s.destination) + ')</option>';
                 });
             } catch(e) {
-                getDemoShipments().forEach(s => {
-                    select.innerHTML += '<option value="' + escHtml(s.id) + '">' + escHtml(s.id) + ' (' + escHtml(s.origin) + '  ' + escHtml(s.destination) + ')</option>';
-                });
+                // Server unreachable — leave dropdown empty
             }
             renderBackdateHistory();
         }
@@ -3672,41 +3664,30 @@
         }
 
         async function loadHistory() {
-            // localStorage is the PERMANENT source of truth for history
-            var localHistory = JSON.parse(localStorage.getItem('toxShipmentHistory') || '[]');
-            var localIds = new Set(localHistory.map(function(s) { return s.id; }));
-
-            // Fetch server shipments — only to discover NEW ones not yet in local history
+            // SERVER is the permanent source of truth for shipment history
+            var allShipments = [];
             try {
                 var res = await fetch('/api/admin/shipments', { headers: { 'x-admin-token': adminToken } });
                 if (res.ok) {
-                    var serverShipments = await res.json();
-                    var added = false;
-                    serverShipments.forEach(function(s) {
-                        if (!localIds.has(s.id)) {
-                            localHistory.push({
-                                ...s,
-                                createdAt: s.createdAt || s.pickupDate || new Date().toISOString()
-                            });
-                            added = true;
-                        }
-                    });
-                    // Persist any newly discovered server shipments into localStorage
-                    if (added) {
-                        try {
-                            localStorage.setItem('toxShipmentHistory', JSON.stringify(localHistory));
-                        } catch(e) {}
-                    }
+                    allShipments = await res.json();
+                    // Cache on server success so offline still works
+                    try { localStorage.setItem('toxShipmentHistory', JSON.stringify(allShipments)); } catch(e) {}
+                } else {
+                    throw new Error('Server returned ' + res.status);
                 }
-            } catch(e) {}
+            } catch(e) {
+                // Offline fallback — use cached data if server unreachable
+                console.warn('History: server unreachable, using cached data');
+                allShipments = JSON.parse(localStorage.getItem('toxShipmentHistory') || '[]');
+            }
 
             // Sort by createdAt descending
-            localHistory.sort(function(a, b) {
+            allShipments.sort(function(a, b) {
                 return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
             });
 
-            allHistoryCache = localHistory;
-            renderHistory(localHistory);
+            allHistoryCache = allShipments;
+            renderHistory(allShipments);
         }
 
         function renderHistory(items) {
@@ -5318,7 +5299,7 @@
         function clearAllData() {
             if (!confirm('WARNING: This will permanently delete ALL local data including shipments, documents, emails, and audit logs. Continue?')) return;
             if (!confirm('Are you absolutely sure? This cannot be undone.')) return;
-            ['toxBackdateLog', 'toxActiveShipments', 'toxSentEmails', 'toxGeneratedDocs', 'toxAdminSettings', 'toxLastBackup'].forEach(function(k) {
+            ['toxBackdateLog', 'toxActiveShipments', 'toxSentEmails', 'toxGeneratedDocs', 'toxAdminSettings', 'toxLastBackup', 'toxShipmentHistory'].forEach(function(k) {
                 localStorage.removeItem(k);
             });
             backdateLog = [];

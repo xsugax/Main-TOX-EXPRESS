@@ -441,13 +441,15 @@ function saveShipments(shipments) {
             .catch(e => { mongoHealthy = false; console.error('  ⚠️  [MongoDB] Save failed:', e.message); });
     }
 
-    // 3. Backup to JSONBin (with retry for reliability)
+    // 3. MUST sync to JSONBin — this is what survives redeploys
     if (process.env.JSONBIN_API_KEY && process.env.JSONBIN_BIN_ID) {
-        jsonBinPutWithRetry(shipments)
-            .then(() => { console.log('  [JSONBin] Synced ' + shipments.length + ' shipments'); })
-            .catch(e => { jsonBinHealthy = false; console.error('  ⚠️  [JSONBin] Sync failed:', e.message); });
+        // Use a global promise tracker so saves complete even if request ends
+        saveShipments._pending = jsonBinPutWithRetry(shipments)
+            .then(() => { console.log('  [JSONBin] ✅ Synced ' + shipments.length + ' shipments'); saveShipments._pending = null; })
+            .catch(e => { jsonBinHealthy = false; console.error('  ⚠️  [JSONBin] Sync failed:', e.message); saveShipments._pending = null; });
     }
 }
+saveShipments._pending = null;
 
 // Smart save — for single shipment operations (faster than full array sync)
 function saveShipmentUpdate(shipmentId, updates) {
@@ -460,7 +462,10 @@ function saveShipmentUpdate(shipmentId, updates) {
             console.error('  ⚠️  [MongoDB] Update failed:', e.message);
         });
     }
-    // JSONBin gets full sync on periodic backup
+    // Also sync full array to JSONBin so it stays current
+    if (process.env.JSONBIN_API_KEY && process.env.JSONBIN_BIN_ID) {
+        jsonBinPutWithRetry(shipmentCache).catch(() => {});
+    }
 }
 
 function saveShipmentInsert(shipment) {
@@ -491,20 +496,34 @@ function saveShipmentDelete(shipmentId) {
     }
 }
 
-// ---- Startup: Load shipments from MongoDB (primary) or JSONBin (fallback) ----
+// ---- Startup: Load shipments — NEVER overwrite good data with empty ----
 async function initShipmentStore() {
-    // PRIORITY 1: MongoDB (your own database)
+    // First, read whatever is in the local file (might have data from before restart)
+    var localData = [];
+    try {
+        localData = JSON.parse(fs.readFileSync(shipmentsFile, 'utf8'));
+        if (!Array.isArray(localData)) localData = [];
+    } catch(e) { localData = []; }
+
+    // PRIORITY 1: MongoDB 
     if (process.env.MONGODB_URI) {
         var connected = await connectMongo();
         if (connected) {
             try {
                 var data = await mongoGetAll();
-                shipmentCache = data;
-                try { fs.writeFileSync(shipmentsFile, JSON.stringify(data, null, 2)); } catch(e) {}
-                console.log('  ✅ Loaded ' + data.length + ' shipments from MongoDB (YOUR permanent database)');
-                // Also backup to JSONBin
+                // SAFETY: Only use MongoDB data if it has MORE shipments, or local is empty
+                if (data.length >= localData.length) {
+                    shipmentCache = data;
+                    try { fs.writeFileSync(shipmentsFile, JSON.stringify(data, null, 2)); } catch(e) {}
+                    console.log('  ✅ Loaded ' + data.length + ' shipments from MongoDB');
+                } else if (localData.length > 0) {
+                    // Local has more data — push it to MongoDB
+                    shipmentCache = localData;
+                    console.log('  ⚠️  Local has ' + localData.length + ' shipments vs MongoDB ' + data.length + ' — keeping local, syncing to MongoDB');
+                    try { await mongoSaveAll(localData); } catch(e) {}
+                }
                 if (process.env.JSONBIN_API_KEY && process.env.JSONBIN_BIN_ID) {
-                    jsonBinPut(data).catch(() => {});
+                    jsonBinPut(shipmentCache).catch(() => {});
                 }
                 return;
             } catch (e) {
@@ -515,29 +534,41 @@ async function initShipmentStore() {
         console.log('  ⚠️  MONGODB_URI not set — MongoDB disabled');
     }
 
-    // PRIORITY 2: JSONBin (with retry — reliable even without MongoDB)
+    // PRIORITY 2: JSONBin
     if (process.env.JSONBIN_API_KEY && process.env.JSONBIN_BIN_ID) {
-        console.log('  [JSONBin] Loading from permanent storage (3 retries)...');
+        console.log('  [JSONBin] Loading from permanent storage...');
         try {
             var data = await jsonBinGetWithRetry();
-            shipmentCache = data;
-            try { fs.writeFileSync(shipmentsFile, JSON.stringify(data, null, 2)); } catch(e) {}
-            console.log('  ✅ Loaded ' + data.length + ' shipments from JSONBin (backup)');
-            // If MongoDB is now connected, migrate data there
-            if (mongoHealthy && mongoCollection) {
-                try { await mongoSaveAll(data); console.log('  ✅ Migrated JSONBin data to MongoDB'); } catch(e) {}
+            // ===== CRITICAL FIX: NEVER let empty JSONBin overwrite good local data =====
+            if (data.length === 0 && localData.length > 0) {
+                console.log('  ⚠️  JSONBin returned EMPTY but local has ' + localData.length + ' shipments — KEEPING LOCAL DATA');
+                console.log('  ⚠️  Re-uploading local data to JSONBin...');
+                shipmentCache = localData;
+                try { await jsonBinPutWithRetry(localData); console.log('  ✅ Restored ' + localData.length + ' shipments to JSONBin'); } catch(e) {}
+            } else if (data.length >= localData.length) {
+                shipmentCache = data;
+                try { fs.writeFileSync(shipmentsFile, JSON.stringify(data, null, 2)); } catch(e) {}
+                console.log('  ✅ Loaded ' + data.length + ' shipments from JSONBin');
+            } else {
+                // Local has more — keep local, re-upload to JSONBin
+                console.log('  ⚠️  Local has ' + localData.length + ' vs JSONBin ' + data.length + ' — keeping local');
+                shipmentCache = localData;
+                try { await jsonBinPutWithRetry(localData); } catch(e) {}
+            }
+            if (mongoHealthy && mongoCollection && shipmentCache.length > 0) {
+                try { await mongoSaveAll(shipmentCache); } catch(e) {}
             }
             return;
         } catch (e) {
-            console.error('  ❌ JSONBin backup also failed:', e.message);
+            console.error('  ❌ JSONBin failed:', e.message);
         }
     }
 
-    // PRIORITY 3: Local file (temporary only)
-    try {
-        shipmentCache = JSON.parse(fs.readFileSync(shipmentsFile, 'utf8'));
-        console.log('  ⚠️  Loaded ' + shipmentCache.length + ' shipments from local file (TEMPORARY)');
-    } catch(e) {
+    // PRIORITY 3: Local file
+    if (localData.length > 0) {
+        shipmentCache = localData;
+        console.log('  ⚠️  Loaded ' + localData.length + ' shipments from local file');
+    } else {
         shipmentCache = [];
         console.log('  ⚠️  No shipments found — starting empty');
     }
@@ -1291,6 +1322,31 @@ app.post('/api/admin/storage-resync', verifyAdminToken, rateLimit(60000, 3), asy
     }
     res.status(400).json({ error: 'No external storage configured (set MONGODB_URI or JSONBin env vars)' });
 });
+
+// ---- Graceful shutdown: Save pending data before Render kills us ----
+async function gracefulShutdown(signal) {
+    console.log('\n  ⚠️  ' + signal + ' received — saving pending data before shutdown...');
+    // Wait for any in-flight JSONBin save to finish
+    if (saveShipments._pending) {
+        try { await saveShipments._pending; console.log('  ✅ Pending JSONBin save completed'); }
+        catch(e) { console.error('  ❌ Pending save failed:', e.message); }
+    }
+    // Do one final sync to make sure latest cache is saved
+    if (shipmentCache && shipmentCache.length > 0) {
+        if (mongoHealthy && mongoCollection) {
+            try { await mongoSaveAll(shipmentCache); console.log('  ✅ Final MongoDB sync: ' + shipmentCache.length + ' shipments'); }
+            catch(e) { console.error('  ❌ Final MongoDB sync failed:', e.message); }
+        }
+        if (process.env.JSONBIN_API_KEY && process.env.JSONBIN_BIN_ID) {
+            try { await jsonBinPut(shipmentCache); console.log('  ✅ Final JSONBin sync: ' + shipmentCache.length + ' shipments'); }
+            catch(e) { console.error('  ❌ Final JSONBin sync failed:', e.message); }
+        }
+    }
+    console.log('  👋 Shutdown complete.');
+    process.exit(0);
+}
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 (async () => {
     await initShipmentStore();
