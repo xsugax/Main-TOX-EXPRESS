@@ -11,26 +11,28 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // ==================== EMAIL SETUP ====================
+let emailTransporter = null;
 let emailReady = false;
 let emailVerifyError = null;
 let emailMode = 'none'; // 'brevo-api', 'smtp', or 'none'
 
-// Brevo HTTP API key (preferred — bypasses SMTP port blocks)
-const BREVO_API_KEY = process.env.EMAIL_PASSWORD; // Brevo xsmtpsib key works for both SMTP and API
+const BREVO_API_KEY = process.env.BREVO_API_KEY; // Optional: xkeysib-... key for HTTP API
 const EMAIL_SENDER = process.env.EMAIL_USER || process.env.EMAIL_FROM;
 
 console.log('  [Email Config] EMAIL_USER:', process.env.EMAIL_USER ? process.env.EMAIL_USER.substring(0, 5) + '***' : 'NOT SET');
 console.log('  [Email Config] EMAIL_PASSWORD:', process.env.EMAIL_PASSWORD ? process.env.EMAIL_PASSWORD.substring(0, 8) + '***' : 'NOT SET');
+console.log('  [Email Config] BREVO_API_KEY:', process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.substring(0, 10) + '***' : 'NOT SET');
 console.log('  [Email Config] EMAIL_HOST:', process.env.EMAIL_HOST || 'NOT SET');
 
-if (BREVO_API_KEY && EMAIL_SENDER && process.env.EMAIL_HOST && process.env.EMAIL_HOST.includes('brevo')) {
-    // Use Brevo HTTP API (port 443) — more reliable than SMTP on cloud hosts
+if (BREVO_API_KEY && EMAIL_SENDER) {
+    // Brevo HTTP API (port 443) — always works, bypasses SMTP blocks
     emailMode = 'brevo-api';
     emailReady = true;
-    console.log('  ✅ Email configured via Brevo HTTP API (HTTPS — no SMTP port needed)');
-} else if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
-    // Fallback to SMTP
-    emailMode = 'smtp';
+    console.log('  ✅ Email configured via Brevo HTTP API');
+}
+
+if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
+    // Also set up SMTP as primary or fallback
     var smtpConfig;
     if (process.env.EMAIL_HOST) {
         smtpConfig = {
@@ -42,9 +44,9 @@ if (BREVO_API_KEY && EMAIL_SENDER && process.env.EMAIL_HOST && process.env.EMAIL
                 pass: process.env.EMAIL_PASSWORD.trim()
             },
             tls: { rejectUnauthorized: false },
-            connectionTimeout: 10000,
+            connectionTimeout: 15000,
             greetingTimeout: 10000,
-            socketTimeout: 15000
+            socketTimeout: 20000
         };
     } else {
         smtpConfig = {
@@ -56,27 +58,30 @@ if (BREVO_API_KEY && EMAIL_SENDER && process.env.EMAIL_HOST && process.env.EMAIL
             tls: { rejectUnauthorized: true }
         };
     }
-    var emailTransporter = nodemailer.createTransport(smtpConfig);
-    emailReady = true;
+    emailTransporter = nodemailer.createTransport(smtpConfig);
+    if (emailMode !== 'brevo-api') {
+        emailMode = 'smtp';
+        emailReady = true;
+    }
     emailTransporter.verify(function(err) {
         if (err) {
-            console.log('  ⚠️  SMTP verify error (trying Brevo API fallback):', err.message);
+            console.log('  ⚠️  SMTP verify error:', err.message);
             emailVerifyError = err.message;
-            // If SMTP fails but we have Brevo key, switch to API mode
-            if (BREVO_API_KEY && EMAIL_SENDER) {
-                emailMode = 'brevo-api';
-                console.log('  ↪ Switched to Brevo HTTP API mode');
+            if (emailMode !== 'brevo-api') {
+                console.log('  ⚠️  SMTP is the only email method — emails may fail');
             }
         } else {
             console.log('  ✅ SMTP transporter verified');
             emailVerifyError = null;
+            // If SMTP works, prefer it over API
+            emailMode = 'smtp';
         }
     });
-} else {
+} else if (emailMode !== 'brevo-api') {
     console.log('  ⚠️  EMAIL_USER / EMAIL_PASSWORD not set — email sending disabled');
     var envKeys = Object.keys(process.env).filter(function(k) { return k.indexOf('EMAIL') > -1 || k.indexOf('email') > -1; });
     if (envKeys.length > 0) {
-        console.log('  ⚠️  Found email-related env vars with wrong names:', envKeys.join(', '));
+        console.log('  ⚠️  Found email-related env vars:', envKeys.join(', '));
     }
 }
 
