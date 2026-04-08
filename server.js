@@ -1433,9 +1433,20 @@ async function gracefulShutdown(signal) {
 }
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+process.on('unhandledRejection', (reason) => {
+    console.error('  ❌ Unhandled promise rejection:', reason);
+});
+process.on('uncaughtException', (err) => {
+    console.error('  ❌ Uncaught exception:', err.message, err.stack);
+});
 
 (async () => {
-    await initShipmentStore();
+    try {
+        await initShipmentStore();
+    } catch (startupError) {
+        console.error('  ❌ initShipmentStore crashed (non-fatal):', startupError.message);
+        // Server still starts — just with local data
+    }
 
     // Start periodic JSONBin backup (every 10 min)
     startPeriodicBackup();
@@ -1486,4 +1497,6 @@ process.on('SIGINT', () => gracefulShutdown('SIGINT'));
     // Re-ping every 4 hours to keep indexing fresh
     setInterval(pingSearchEngines, 4 * 60 * 60 * 1000);
     });
-})();
+})().catch(err => {
+    console.error('  ❌ FATAL startup error:', err.message, err.stack);
+});
