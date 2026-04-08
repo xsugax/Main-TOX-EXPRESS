@@ -1440,18 +1440,9 @@ process.on('uncaughtException', (err) => {
     console.error('  ❌ Uncaught exception:', err.message, err.stack);
 });
 
-(async () => {
-    try {
-        await initShipmentStore();
-    } catch (startupError) {
-        console.error('  ❌ initShipmentStore crashed (non-fatal):', startupError.message);
-        // Server still starts — just with local data
-    }
-
-    // Start periodic JSONBin backup (every 10 min)
-    startPeriodicBackup();
-
-    app.listen(PORT, () => {
+// START THE SERVER IMMEDIATELY — bind port first, then do async init
+// This prevents Render from killing us for not binding the port fast enough
+app.listen(PORT, () => {
     console.log(`
     ╔════════════════════════════════════════════════════════════════╗
     ║                                                                ║
@@ -1461,42 +1452,38 @@ process.on('uncaughtException', (err) => {
     ║  📊 Admin Panel:   http://localhost:${PORT}/admin.html          ║
     ║  🌍 Domain:        https://toxexpress.org                     ║
     ║                                                                ║
-    ║  Features:                                                    ║
-    ║  ✓ Visitor Tracking & Analytics                             ║
-    ║  ✓ Shipment Management (Status, Cancel, Delivery)           ║
-    ║  ✓ Regulatory Audit Logs                                    ║
-    ║  ✓ Admin Dashboard with Real-time Stats                     ║
-    ║  ✓ Professional Email System (Nodemailer SMTP)              ║
-    ║  ✓ Auto Search Engine Indexing (Google/Bing/Yandex)         ║
-    ║  ✓ MongoDB Atlas — YOUR Permanent Shipment Database         ║
-    ║  ✓ JSONBin.io Backup Storage                                ║
-    ║                                                                ║
     ╚════════════════════════════════════════════════════════════════╝
     `);
 
-    // Log storage status clearly
-    if (mongoHealthy) {
-        console.log('  ✅ Shipment storage: MongoDB Atlas (YOUR permanent database — survives ALL redeploys)');
-    } else if (process.env.MONGODB_URI) {
-        console.log('  ❌ MongoDB connection FAILED — check MONGODB_URI env var');
-    }
-    if (jsonBinHealthy) {
-        console.log('  ✅ JSONBin backup: Active');
-    } else if (process.env.JSONBIN_API_KEY) {
-        console.log('  ⚠️  JSONBin backup: FAILED — check JSONBIN_API_KEY and JSONBIN_BIN_ID');
-    }
-    if (!mongoHealthy && !jsonBinHealthy) {
-        console.log('  ⚠️  NO external storage! Shipments WILL be lost on redeploy!');
-        console.log('  ⚠️  Set MONGODB_URI in Render env vars for permanent storage.');
-    }
+    // Now do async initialization (MongoDB, JSONBin, etc.)
+    (async () => {
+        try {
+            await initShipmentStore();
+        } catch (startupError) {
+            console.error('  ❌ initShipmentStore error (non-fatal):', startupError.message);
+        }
 
-    // Auto-ping search engines on every server start/deploy
-    console.log('  🔍 Pinging search engines for indexing...');
-    pingSearchEngines();
+        startPeriodicBackup();
 
-    // Re-ping every 4 hours to keep indexing fresh
-    setInterval(pingSearchEngines, 4 * 60 * 60 * 1000);
+        // Log storage status
+        if (mongoHealthy) {
+            console.log('  ✅ Shipment storage: MongoDB Atlas (permanent)');
+        } else if (process.env.MONGODB_URI) {
+            console.log('  ❌ MongoDB connection FAILED — check MONGODB_URI env var');
+        }
+        if (jsonBinHealthy) {
+            console.log('  ✅ JSONBin backup: Active');
+        } else if (process.env.JSONBIN_API_KEY) {
+            console.log('  ⚠️  JSONBin backup: FAILED — check env vars');
+        }
+        if (!mongoHealthy && !jsonBinHealthy) {
+            console.log('  ⚠️  NO external storage! Set MONGODB_URI for permanent storage.');
+        }
+
+        console.log('  🔍 Pinging search engines...');
+        pingSearchEngines();
+        setInterval(pingSearchEngines, 4 * 60 * 60 * 1000);
+    })().catch(err => {
+        console.error('  ❌ Async init error:', err.message);
     });
-})().catch(err => {
-    console.error('  ❌ FATAL startup error:', err.message, err.stack);
 });
